@@ -1,0 +1,11 @@
+# Ignore everything
+*
+
+# Package metadata
+!package.json
+!README.md
+
+# Distribution (compiled JS + declarations)
+!dist/
+!dist/**
+dist/*.test.*

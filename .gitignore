@@ -1,0 +1,43 @@
+# Ignore everything
+*
+
+# Git config
+!.gitignore
+
+# Documentation
+!README.md
+!ARCHITECTURE.md
+
+# Project config
+!package.json
+!.npmignore
+!tsconfig.json
+!xh2m.run.ts
+!bun.lock
+
+# Linting / Formatting
+!.oxlintrc.json
+!.oxfmtrc.json
+
+# Source
+!src/
+!src/*.ts
+
+# Nix
+!flake.nix
+!flake.lock
+
+# Secrets (sops-encrypted, committed; plaintext ignored)
+!.sops.yaml
+!secret.yaml
+!*.secret.yaml
+
+# CI/CD
+!.github/
+!.github/**
+
+# Semantic Release
+!.releaserc.json
+
+# Changelog
+!CHANGELOG.md

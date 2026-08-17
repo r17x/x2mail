@@ -1,0 +1,46 @@
+{
+  "branches": ["master"],
+  "tagFormat": "x2mail@${version}",
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits"
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "conventionalcommits"
+      }
+    ],
+    "@semantic-release/changelog",
+    "@semantic-release/npm",
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["package.json", "CHANGELOG.md"],
+        "message": "chore(release): x2mail@${nextRelease.version}\n\n${nextRelease.notes}",
+        "authorName": "anakmagang",
+        "authorEmail": "45801144+anakmagang@users.noreply.github.com"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "release/x2mail-darwin-arm64",
+            "label": "x2mail-darwin-arm64-${nextRelease.version}"
+          },
+          { "path": "release/x2mail-darwin-x64", "label": "x2mail-darwin-x64-${nextRelease.version}" },
+          {
+            "path": "release/x2mail-linux-arm64",
+            "label": "x2mail-linux-arm64-${nextRelease.version}"
+          },
+          { "path": "release/x2mail-linux-x64", "label": "x2mail-linux-x64-${nextRelease.version}" }
+        ]
+      }
+    ]
+  ]
+}

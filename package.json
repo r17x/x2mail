@@ -1,0 +1,58 @@
+{
+  "name": "x2mail",
+  "version": "0.0.0",
+  "private": false,
+  "description": "SMTP/POP3 ↔ HTTP email proxy — localhost bridge for mail clients",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/r17x/x2mail.git"
+  },
+  "bin": {
+    "x2mail": "src/main.ts"
+  },
+  "type": "module",
+  "module": "dist/config.js",
+  "exports": {
+    ".": {
+      "import": "./dist/config.js",
+      "types": "./dist/config.d.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build:lib": "tsc --noEmit false --declaration --outDir dist --rootDir src --rewriteRelativeImportExtensions",
+    "build": "bash -c 'set -euo pipefail && mkdir -p release && bun build src/main.ts --compile --target=bun-darwin-arm64 --outfile release/x2mail-darwin-arm64 && bun build src/main.ts --compile --target=bun-darwin-x64 --outfile release/x2mail-darwin-x64 && bun build src/main.ts --compile --target=bun-linux-arm64 --outfile release/x2mail-linux-arm64 && bun build src/main.ts --compile --target=bun-linux-x64 --outfile release/x2mail-linux-x64 && if [ \"$(uname)\" = \"Darwin\" ]; then for bin in release/x2mail-darwin-arm64 release/x2mail-darwin-x64; do nix_icu=\"$(otool -L \"$bin\" | grep \"/nix/store.*libicucore\" | awk \"{print \\$1}\" || true)\"; if [ -n \"$nix_icu\" ]; then install_name_tool -change \"$nix_icu\" /usr/lib/libicucore.A.dylib \"$bin\" && codesign -f -s - \"$bin\"; fi; done; fi'",
+    "start": "bun run src/main.ts",
+    "test": "bun test",
+    "prepare": "effect-tsgo patch",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt src",
+    "format:check": "oxfmt src -- --check",
+    "release": "semantic-release"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "4.0.0-rc.108",
+    "effect": "4.0.0-rc.108"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "0.36.4",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.1",
+    "@types/bun": "1.2.12",
+    "conventional-changelog-conventionalcommits": "^8.0.0",
+    "oxfmt": "0.60.0",
+    "oxlint": "1.75.0",
+    "semantic-release": "^24.1.1",
+    "typescript": "7.0.2"
+  },
+  "peerDependencies": {
+    "effect": "^4.0.0-rc.108"
+  }
+}
