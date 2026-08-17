@@ -1,0 +1,38 @@
+{
+  "branches": ["master"],
+  "tagFormat": "xh2m@${version}",
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits"
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "conventionalcommits"
+      }
+    ],
+    "@semantic-release/changelog",
+    "@semantic-release/npm",
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["package.json", "CHANGELOG.md"],
+        "message": "chore(release): xh2m@${nextRelease.version}\n\n${nextRelease.notes}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          { "path": "dist/xh2m-darwin-arm64", "label": "xh2m-darwin-arm64-${nextRelease.version}" },
+          { "path": "dist/xh2m-darwin-x64", "label": "xh2m-darwin-x64-${nextRelease.version}" },
+          { "path": "dist/xh2m-linux-arm64", "label": "xh2m-linux-arm64-${nextRelease.version}" },
+          { "path": "dist/xh2m-linux-x64", "label": "xh2m-linux-x64-${nextRelease.version}" }
+        ]
+      }
+    ]
+  ]
+}

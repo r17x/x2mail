@@ -1,0 +1,51 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "module": "preserve",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "allowJs": true,
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "diagnostics": true,
+        "quickinfo": true,
+        "completions": true,
+        "goto": true,
+        "renames": true,
+        "refactors": true,
+        "diagnosticSeverity": {
+          "nestedEffectGenYield": "error",
+          "effectDoNotation": "error",
+          "asyncFunction": "error",
+          "extendsNativeError": "error",
+          "anyUnknownInErrorContext": "error",
+          "unsafeEffectTypeAssertion": "error",
+          "preferSchemaOverJson": "error",
+          "newPromise": "error",
+          "globalConsoleInEffect": "error",
+          "globalFetchInEffect": "error",
+          "globalDateInEffect": "error",
+          "globalRandomInEffect": "error",
+          "globalTimersInEffect": "error",
+          "processEnvInEffect": "error",
+          "cryptoRandomUUIDInEffect": "error",
+          "nodeBuiltinImport": "off"
+        }
+      }
+    ]
+  },
+  "include": ["src"]
+}
