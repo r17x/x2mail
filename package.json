@@ -9,7 +9,7 @@
     "url": "https://github.com/r17x/x2mail.git"
   },
   "bin": {
-    "x2mail": "src/main.ts"
+    "x2mail": "dist/bin.js"
   },
   "type": "module",
   "module": "dist/config.js",
@@ -25,9 +25,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build:lib": "tsc --noEmit false --declaration --outDir dist --rootDir src --rewriteRelativeImportExtensions",
-    "build": "bash -c 'set -euo pipefail && mkdir -p release && bun build src/main.ts --compile --target=bun-darwin-arm64 --outfile release/x2mail-darwin-arm64 && bun build src/main.ts --compile --target=bun-darwin-x64 --outfile release/x2mail-darwin-x64 && bun build src/main.ts --compile --target=bun-linux-arm64 --outfile release/x2mail-linux-arm64 && bun build src/main.ts --compile --target=bun-linux-x64 --outfile release/x2mail-linux-x64 && if [ \"$(uname)\" = \"Darwin\" ]; then for bin in release/x2mail-darwin-arm64 release/x2mail-darwin-x64; do nix_icu=\"$(otool -L \"$bin\" | grep \"/nix/store.*libicucore\" | awk \"{print \\$1}\" || true)\"; if [ -n \"$nix_icu\" ]; then install_name_tool -change \"$nix_icu\" /usr/lib/libicucore.A.dylib \"$bin\" && codesign -f -s - \"$bin\"; fi; done; fi'",
-    "start": "bun run src/main.ts",
+    "build": "tsc --noEmit false --declaration --outDir dist --rootDir src --rewriteRelativeImportExtensions && mkdir -p release && bun build src/bin.ts --compile --target=bun-darwin-arm64 --outfile release/x2mail-darwin-arm64 && bun build src/bin.ts --compile --target=bun-darwin-x64 --outfile release/x2mail-darwin-x64 && bun build src/bin.ts --compile --target=bun-linux-arm64 --outfile release/x2mail-linux-arm64 && bun build src/bin.ts --compile --target=bun-linux-x64 --outfile release/x2mail-linux-x64",
+    "start": "bun run src/bin.ts",
     "test": "bun test",
     "prepare": "effect-tsgo patch",
     "lint": "oxlint",
@@ -43,6 +42,7 @@
   "devDependencies": {
     "@effect/tsgo": "0.36.4",
     "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^11.0.1",
     "@types/bun": "1.2.12",

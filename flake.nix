@@ -89,6 +89,7 @@
               pkgs.sops
               pkgs.age
               pkgs.yq-go
+              pkgs.patchelf
             ];
           };
         };
