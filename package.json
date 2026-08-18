@@ -1,6 +1,6 @@
 {
   "name": "x2mail",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": false,
   "description": "SMTP/POP3 ↔ HTTP email proxy — localhost bridge for mail clients",
   "license": "MIT",
