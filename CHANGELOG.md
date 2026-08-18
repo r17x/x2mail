@@ -1,3 +1,9 @@
+## [1.0.2](https://github.com/r17x/x2mail/compare/x2mail@1.0.1...x2mail@1.0.2) (2026-08-18)
+
+### Performance Improvements
+
+* add --minify to compiled binaries ([22e4b01](https://github.com/r17x/x2mail/commit/22e4b01b2a0c481edc5a130c9b74c00c1bdd378f))
+
 ## [1.0.1](https://github.com/r17x/x2mail/compare/x2mail@1.0.0...x2mail@1.0.1) (2026-08-18)
 
 ### Bug Fixes
