@@ -4,11 +4,7 @@
  */
 
 import { Console, Data, Effect, FileSystem, Layer, Option, Runtime } from "effect";
-import { BunRuntime } from "@effect/platform-bun";
-import * as BunServices from "@effect/platform-bun/BunServices";
-import * as FetchHttpClient from "@effect/platform-bun/BunHttpClient";
 import { Argument, Command, Flag } from "effect/unstable/cli";
-import pkg from "../package.json";
 import { parseConfig, ServerConfig } from "./config.ts";
 import * as AccountStoreModule from "./account.ts";
 import * as Store from "./store.ts";
@@ -115,9 +111,4 @@ const x2mail = Command.make("x2mail", {
   Command.withDescription("SMTP/POP3 ↔ HTTP email proxy"),
 );
 
-x2mail.pipe(
-  Command.withSubcommands([init]),
-  Command.run({ version: pkg.version }),
-  Effect.provide(Layer.mergeAll(FetchHttpClient.layer, BunServices.layer)),
-  BunRuntime.runMain,
-);
+export const cli = x2mail.pipe(Command.withSubcommands([init]));
