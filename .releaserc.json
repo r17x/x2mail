@@ -17,7 +17,7 @@
     "@semantic-release/changelog",
     "@semantic-release/npm",
     ["@semantic-release/exec", {
-      "prepareCmd": "bun run build && patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 release/x2mail-linux-x64"
+      "prepareCmd": "bun run build && patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 release/x2mail-linux-x64 && upx release/x2mail-linux-arm64 -o release/x2mail-linux-arm64-lite && upx release/x2mail-linux-x64 -o release/x2mail-linux-x64-lite && ./.github/sfx-wrap.sh ${nextRelease.version}"
     }],
     [
       "@semantic-release/git",
@@ -41,7 +41,11 @@
             "path": "release/x2mail-linux-arm64",
             "label": "x2mail-linux-arm64-${nextRelease.version}"
           },
-          { "path": "release/x2mail-linux-x64", "label": "x2mail-linux-x64-${nextRelease.version}" }
+          { "path": "release/x2mail-linux-x64", "label": "x2mail-linux-x64-${nextRelease.version}" },
+          { "path": "release/x2mail-linux-arm64-lite", "label": "x2mail-linux-arm64-lite-${nextRelease.version}" },
+          { "path": "release/x2mail-linux-x64-lite", "label": "x2mail-linux-x64-lite-${nextRelease.version}" },
+          { "path": "release/x2mail-darwin-arm64-lite", "label": "x2mail-darwin-arm64-lite-${nextRelease.version}" },
+          { "path": "release/x2mail-darwin-x64-lite", "label": "x2mail-darwin-x64-lite-${nextRelease.version}" }
         ]
       }
     ]
