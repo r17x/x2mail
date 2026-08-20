@@ -13,6 +13,7 @@
 !.npmignore
 !tsconfig.json
 !xh2m.run.ts
+!build.ts
 !bun.lock
 
 # Linting / Formatting
