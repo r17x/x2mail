@@ -3,8 +3,8 @@
 x2mail is a personal email bridge. Mail clients connect to x2mail through SMTP/POP3. x2mail connects to email providers through HTTP/TCP.
 
 ```
-Mail Client ←TCP→ x2mail ←HTTP/TCP→ Email Provider
-              │                      │
+Mail Client <-TCP-> x2mail <-HTTP/TCP-> Email Provider
+              |                      |
          SMTP (587)              Resend API
          POP3 (110)              Postmark API
                                  Mailgun API
@@ -15,155 +15,143 @@ Mail Client ←TCP→ x2mail ←HTTP/TCP→ Email Provider
                                  IMAP server
 ```
 
-## File Map
+## 1. Shapes
 
-```
-src/
-  main.ts              CLI entry, config loading, layer wiring
-  config.ts            Config entry point, ServerConfig service, config loader
-  schema.ts            Envelope, InboxMessage, Account, provider config unions
-  error.ts             SendError, FetchError, ProtocolError, SessionDone
-  account.ts           AccountStore service -- credential verification
-  store.ts             MailStore service -- Ref-backed in-memory inbox
+The domain language: what flows through the graph.
 
-  smtp.ts              SMTP TCP server, per-connection state machine
-  smtp.command.ts      SMTP line parser (tagged union) + response builders
-  pop3.ts              POP3 TCP server, per-connection state machine
-  pop3.command.ts      POP3 line parser (tagged union) + response builders
+| Kind     | Name                | Fields / Members |
+|----------|---------------------|------------------|
+| Record   | `Account`           | `email, password, send?, receive?` |
+| Record   | `InboxMessage`      | `id: MessageId, raw: Uint8Array, receivedAt: DateTime.Utc` |
+| Record   | `Envelope`          | `from: Email, to: Email[]` |
+| ID       | `Email`             | Branded string |
+| ID       | `Password`          | Branded string |
+| ID       | `Hostname`          | Branded string |
+| ID       | `MessageId`         | Branded string |
+| ID       | `MsgNum`            | Branded number |
+| Variant  | `SmtpCommand`       | `Ehlo \| AuthPlain \| MailFrom \| RcptTo \| Data \| DataLine \| DataEnd \| Rset \| Noop \| Quit \| Unknown` |
+| Variant  | `Pop3Command`       | `User \| Pass \| Stat \| List \| Retr \| Dele \| Noop \| Quit \| Unknown` |
+| Variant  | `SmtpPhase`         | `greeting \| ehlo \| auth \| mail \| rcpt \| data \| quit` |
+| Variant  | `Pop3Phase`         | `auth_user \| auth_pass \| transaction \| quit` |
+| Error    | `SendError`         | Tagged error from send providers |
+| Error    | `FetchError`        | Tagged error from receive providers |
+| Error    | `ProtocolError`     | Tagged error from AccountStore and MailStore |
+| Error    | `SessionDone`       | Control-flow signal for clean session teardown |
+| Config   | `AppConfig`         | `{ accounts: Account[], server: ServerConfig }` |
 
-  send.ts              SendProvider contract + provider dispatch via Match
-  send.resend.ts       Resend -- POST raw MIME as message/rfc822
-  send.postmark.ts     Postmark -- POST base64 JSON
-  send.mailgun.ts      Mailgun -- POST multipart FormData
-  send.ses.ts          SES v2 -- POST JSON with SigV4
-  send.smtp.ts         SMTP relay -- TCP forward with dot-stuffing
+## 2. A (the happy path)
 
-  receive.ts           ReceiveProvider contract + provider dispatch via Match
-  receive.r2.ts        R2 -- CF API list + get
-  receive.s3.ts        S3 -- ListObjectsV2 + GetObject with SigV4
-  receive.gmail.ts     Gmail -- REST API with OAuth2 token refresh
-  receive.imap.ts      IMAP -- LOGIN, SEARCH SINCE, FETCH BODY[]
+Three concurrent paths run inside `Effect.all(unbounded)`.
 
-  poller.ts            Background poll loop -- Schedule.spaced per account
-  aws.sigv4.ts         AWS SigV4 signing via Web Crypto
-```
-
-## Send Path
+**Send** -- mail client submits a message through SMTP, x2mail dispatches it to a provider:
 
 ```ts
-SmtpServer.run()
-  → handleSession(socket)
-    → processLine(line, ref, write)
-      case DataEnd:
-        → SendProvider.send(raw, envelope)
-          → makeSendLayer(account.send)
-            case "resend"  → ResendSend.make   → HttpClient
-            case "postmark"→ PostmarkSend.make  → HttpClient
-            case "mailgun" → MailgunSend.make   → HttpClient
-            case "ses"     → SesSend.make       → HttpClient + SigV4
-            case "smtp"    → SmtpSend.make      → Socket (TCP/TLS)
+SMTP Server
+  -> Auth
+       -> AccountStore
+  -> Collect Message
+  -> SendProvider
+       -> Match dispatch:
+            resend | postmark | mailgun | ses | smtp
+       -> Email Service (HTTP or TCP)
 ```
 
-## Receive Path
+**Receive** -- the poller fetches new mail from a provider and stores it:
 
 ```ts
-Poller.start(accounts)
-  → pollOnce (per account, forkDetach on Schedule.spaced)
-    → ReceiveProvider.fetch(since) / .remove(id)
-      → makeReceiveLayer(account.receive)
-        case "r2"   → R2Receive.make    → HttpClient
-        case "s3"   → S3Receive.make    → HttpClient + SigV4
-        case "gmail"→ GmailReceive.make → HttpClient + OAuth2
-        case "imap" → ImapReceive.make  → Socket (TCP+TLS)
-    → MailStore.addMessages(account, messages)
-
-Pop3Server.run()
-  → handleSession(socket)
-    → processLine(line, state, write, stateRef)
-      → MailStore.list / .get / .size / .totalSize / .markDelete / .commitDeletes / .resetDeletes
+Poller
+  -> ReceiveProvider
+       -> Match dispatch:
+            r2 | s3 | gmail | imap
+       -> Provider Service (HTTP or TCP)
+  -> MailStore.addMessages
 ```
+
+**Retrieve** -- mail client retrieves stored messages through POP3:
+
+```ts
+POP3 Server
+  -> Auth
+       -> AccountStore
+  -> MailStore
+       -> list / get / size / markDelete / commitDeletes
+```
+
+## 4. E (where the graph breaks)
+
+Each error stays within its domain boundary. The system converts errors to protocol responses or log lines at the boundary.
+
+| Error           | Source                    | Caught at      | Becomes                       |
+|-----------------|---------------------------|----------------|-------------------------------|
+| `SendError`     | Send providers            | SMTP Server    | 451 temporary SMTP error      |
+| `FetchError`    | Receive providers         | Poller         | Log warning, poll continues   |
+| `ProtocolError` | AccountStore, MailStore   | SMTP/POP3      | Protocol rejection (535/ERR)  |
+| `SessionDone`   | Protocol servers          | Session handler| Clean session teardown        |
+
+Errors do not cross domain boundaries.
+
+## 5. R (what each node needs)
+
+| Service           | Contract                      | R                |
+|-------------------|-------------------------------|------------------|
+| `AppConfig`       | `{ accounts, server }`        | `never`          |
+| `AccountStore`    | `authenticate(email, pw)`     | `AppConfig`      |
+| `MailStore`       | `list / get / add / delete`   | `AppConfig`      |
+| `SendProvider`    | `send(raw, envelope)`         | Per-message, constructed from account config |
+| `ReceiveProvider` | `fetch(since) / remove(id)`   | Per-account, constructed from account config |
+
+`SendProvider` and `ReceiveProvider` are NOT in the global layer. The system constructs them per-message and per-poll from the account config.
+
+### Layer wiring
+
+```ts
+cli
+  -> parseConfig
+       -> Schema.decodeUnknownEffect(XhConfig)
+  -> Layer.succeed(AppConfig)
+  -> AccountStore.layer          R = AppConfig
+  -> MailStore.layer             R = AppConfig
+  -> Effect.all([SMTP, POP3, Poller], unbounded)
+  -> FetchHttpClient.layer
+  -> BunRuntime.runMain
+```
+
+The system provides `HttpClient` once at the outermost layer. `AccountStore` and `MailStore` feed the concurrent server group. Per-message `SendProvider` and per-poll `ReceiveProvider` are constructed inline from the account config.
+
+## 6. Boundary
+
+The trust boundary is `parseConfig`. It performs dynamic import, then Schema decode into `AppConfig`. After that point, the types are trusted.
+
+Each send and receive provider decodes HTTP responses at its own boundary. Provider-level Schema decode converts unknown API responses into trusted domain records.
+
+## 9. Test (R-swap proof)
+
+```ts
+AppConfig.layerTest(overrides?)      -> Schema defaults + overrides
+AccountStore.layerTest(overrides?)   -> AccountStore.layer + AppConfig.layerTest
+MailStore.layerTest(overrides?)      -> MailStore.layer + AppConfig.layerTest
+```
+
+Same graph shape. Same A. Same E. Different R.
+
+Provider tests swap `HttpClient` R with mock fetch. TCP provider tests use a mock `net.Server`.
 
 ## State Machines
 
-**SMTP:** `greeting → ehlo → auth → mail → rcpt → data → mail → ...`
+**SMTP:** `greeting -> ehlo -> auth -> mail -> rcpt -> data -> mail -> ...`
 
 ```
-greeting → ehlo → auth → mail ←──┐
-                           ↓      │
-                          rcpt    │
-                           ↓      │
-                          data ───┘
+greeting -> ehlo -> auth -> mail <---+
+                             |       |
+                            rcpt     |
+                             |       |
+                            data ----+
 ```
 
-**POP3:** `auth_user → auth_pass → transaction → quit`
+**POP3:** `auth_user -> auth_pass -> transaction -> quit`
 
 ```
-auth_user → auth_pass → transaction → quit
-              │              ↑
-              └──────────────┘  (auth fail)
+auth_user -> auth_pass -> transaction -> quit
+                |              ^
+                +--------------+  (auth fail)
 ```
-
-## Module Map
-
-```
-Entry:           main.ts, config.ts
-Servers:         smtp.ts, pop3.ts
-Parsers:         smtp.command.ts, pop3.command.ts
-Services:        account.ts, store.ts
-Contracts:       send.ts, receive.ts, schema.ts, error.ts
-Send providers:  send.resend.ts, send.postmark.ts, send.mailgun.ts, send.ses.ts, send.smtp.ts
-Recv providers:  receive.r2.ts, receive.s3.ts, receive.gmail.ts, receive.imap.ts
-Shared:          aws.sigv4.ts
-Poller:          poller.ts
-```
-
-## R Channel
-
-```
-SmtpServer.run         R = ServerConfig | AccountStore | SendProvider (per message, via makeSendLayer)
-Pop3Server.run         R = ServerConfig | AccountStore | MailStore
-Poller.start           R = ServerConfig | MailStore | ReceiveProvider (per account, via makeReceiveLayer)
-makeSendLayer(config)  R = HttpClient (HTTP providers) | never (TCP providers)
-makeReceiveLayer(cfg)  R = HttpClient (HTTP providers) | never (TCP providers)
-```
-
-The system scopes `SendProvider` per-message and `ReceiveProvider` per-poll. It constructs them from the account config at call time. They are not part of the global layer.
-
-## E Channel
-
-The system uses three tagged errors and one control-flow error. Each error is scoped at its layer boundary.
-
-```
-SendError      ← send providers → SmtpServer (caught → 451 SMTP temp error)
-FetchError     ← receive providers → Poller (caught → Effect.logWarning, poll continues)
-ProtocolError  ← AccountStore, MailStore → SMTP/POP3 servers (auth fail → 535/ERR, bad index → ERR)
-SessionDone    ← protocol servers → signals normal session end (QUIT / connection close)
-```
-
-Errors do not cross domain boundaries. The system converts `SendError` to an SMTP response code, `FetchError` to a log line, `ProtocolError` to a protocol-level rejection, and `SessionDone` to a clean session teardown.
-
-## Shapes
-
-```ts
-Envelope         { from: Email, to: Email[] }
-InboxMessage     { id: MessageId, raw: Uint8Array, receivedAt: DateTime.Utc }
-Account          { email: Email, password: Password, send?: AccountSendConfig, receive?: AccountReceiveConfig }
-ServerConfig     { hostname: Hostname, smtpPort: number, pop3Port: number, pollInterval: number, maxMessages: number, maxDataMb: number } (all with defaults)
-XhConfig         { accounts: Account[], server: ServerConfig } (server defaults to {})
-SmtpCommand      TaggedUnion: Ehlo | AuthPlain | MailFrom | RcptTo | Data | DataLine | DataEnd | ...
-Pop3Command      TaggedUnion: User | Pass | Stat | List | Retr | Dele | Quit | ...
-```
-
-## Layer Wiring
-
-```ts
-program
-  → parseConfig(path)
-  → Effect.provide(appLayer)
-      appLayer = AccountStore.make(accounts) + MailStore.layer
-  → Effect.all([SmtpServer.run, Pop3Server.run, Poller.start], unbounded)
-  → Effect.provide(FetchHttpClient.layer)
-  → BunRuntime.runMain
-```
-
-The system provides `HttpClient` once at the outermost layer. It provides `AccountStore` and `MailStore` to the concurrent server group. It constructs the per-message `SendProvider` and per-poll `ReceiveProvider` inline from the account config. They are not in the global layer.
