@@ -1,3 +1,9 @@
+## [1.0.3](https://github.com/r17x/x2mail/compare/x2mail@1.0.2...x2mail@1.0.3) (2026-08-20)
+
+### Bug Fixes
+
+* register x2mail virtual module via Bun.plugin for compiled binaries ([1a7fc91](https://github.com/r17x/x2mail/commit/1a7fc912de0e22fcb8a0760a8ea725649a3043c5))
+
 ## [1.0.2](https://github.com/r17x/x2mail/compare/x2mail@1.0.1...x2mail@1.0.2) (2026-08-18)
 
 ### Performance Improvements
