@@ -3,11 +3,11 @@
  * CLI entry point — parse args via Effect CLI, load config, wire layers, run SMTP + POP3 + poller.
  */
 
-import { Console, Data, Effect, FileSystem, Layer, Option, Runtime } from "effect";
+import { Console, Data, Effect, FileSystem, Layer, Logger, Option, Runtime } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
-import { parseConfig, ServerConfig } from "./config.ts";
-import * as AccountStoreModule from "./account.ts";
-import * as Store from "./store.ts";
+import { AppConfig, parseConfig } from "./config.ts";
+import { AccountStore } from "./account.ts";
+import { MailStore } from "./store.ts";
 import * as SmtpServer from "./smtp.ts";
 import * as Pop3Server from "./pop3.ts";
 import * as Poller from "./poller.ts";
@@ -69,10 +69,14 @@ const x2mail = Command.make("x2mail", {
   pollInterval: Flag.optional(
     Flag.integer("poll-interval").pipe(Flag.withDescription("Poll interval in seconds")),
   ),
+  log: Flag.string("log").pipe(
+    Flag.withDefault("stdout"),
+    Flag.withDescription("Log output: stdout or file path"),
+  ),
 }).pipe(
   Command.withHandler(
     Effect.fn("x2mail.run")(
-      function* ({ config: configPath, smtpPort, pop3Port, pollInterval }) {
+      function* ({ config: configPath, smtpPort, pop3Port, pollInterval, log }) {
         const { accounts, server } = yield* parseConfig(configPath);
         const finalServer = {
           ...server,
@@ -82,16 +86,22 @@ const x2mail = Command.make("x2mail", {
         };
 
         yield* Console.log(
-          `x2mail — SMTP :${finalServer.smtpPort}  POP3 :${finalServer.pop3Port}  poll ${finalServer.pollInterval}s`,
+          `x2mail — SMTP :${finalServer.smtpPort}  POP3 :${finalServer.pop3Port}  poll ${finalServer.pollInterval}s  log ${log}`,
         );
 
-        const appLayer = Layer.mergeAll(AccountStoreModule.make(accounts), Store.layer).pipe(
-          Layer.provideMerge(Layer.succeed(ServerConfig, ServerConfig.of(finalServer))),
+        const appLayer = Layer.mergeAll(AccountStore.layer, MailStore.layer).pipe(
+          Layer.provideMerge(Layer.succeed(AppConfig, AppConfig.of({ accounts, server: finalServer }))),
         );
 
-        yield* Effect.all([SmtpServer.run(), Pop3Server.run, Poller.start(accounts)], {
+        const loggerLayer = Logger.layer(
+          log === "stdout"
+            ? [Logger.defaultLogger]
+            : [Logger.toFile(Logger.formatSimple, log)],
+        );
+
+        yield* Effect.all([SmtpServer.run(), Pop3Server.run, Poller.start], {
           concurrency: "unbounded",
-        }).pipe(Effect.provide(appLayer));
+        }).pipe(Effect.provide(Layer.merge(appLayer, loggerLayer)));
       },
       (E) =>
         E.pipe(

@@ -12,6 +12,7 @@ import type { MessageId } from "./schema.ts";
 import * as S3Receive from "./receive.s3.ts";
 
 const testConfig = {
+  provider: "s3" as const,
   accessKeyId: "AKIAIOSFODNN7EXAMPLE",
   secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
   region: "us-east-1",

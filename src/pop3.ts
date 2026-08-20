@@ -8,7 +8,7 @@ import type * as Socket from "effect/unstable/socket/Socket";
 import * as NodeSocketServer from "@effect/platform-bun/BunSocketServer";
 import * as Pop3Cmd from "./pop3.command.ts";
 import { AccountStore } from "./account.ts";
-import { ServerConfig } from "./config.ts";
+import { AppConfig } from "./config.ts";
 import { SessionDone } from "./error.ts";
 import { MailStore } from "./store.ts";
 import type { Account, Email } from "./schema.ts";
@@ -200,7 +200,7 @@ const handleSession = (socket: Socket.Socket) =>
   }).pipe(Effect.scoped);
 
 export const run = Effect.gen(function* () {
-  const config = yield* ServerConfig;
+  const { server: config } = yield* AppConfig;
   const server = yield* NodeSocketServer.make({ port: config.pop3Port });
   return yield* server.run(handleSession);
 }).pipe(Effect.scoped);

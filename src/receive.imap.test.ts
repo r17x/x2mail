@@ -8,7 +8,7 @@ import { DateTime, Effect } from "effect";
 import { describe, expect, it } from "bun:test";
 import { FetchError } from "./error.ts";
 import { ReceiveProvider } from "./receive.ts";
-import type { MessageId } from "./schema.ts";
+import type { Hostname, MessageId, Password } from "./schema.ts";
 import * as ImapReceive from "./receive.imap.ts";
 
 const startMockImapServer = (messages: Record<number, string>, options?: { loginFail?: boolean }) =>
@@ -74,10 +74,11 @@ describe("IMAP Receive Provider", () => {
     return Effect.gen(function* () {
       const server = yield* startMockImapServer({ 1: msg1, 2: msg2 });
       const layer = ImapReceive.make({
-        host: "127.0.0.1",
+        provider: "imap" as const,
+        host: "127.0.0.1" as Hostname,
         port: serverPort(server),
         username: "testuser",
-        password: "testpass",
+        password: "testpass" as Password,
         tls: false,
       });
       const provider = yield* Effect.provide(ReceiveProvider, layer);
@@ -97,10 +98,11 @@ describe("IMAP Receive Provider", () => {
     Effect.gen(function* () {
       const server = yield* startMockImapServer({});
       const layer = ImapReceive.make({
-        host: "127.0.0.1",
+        provider: "imap" as const,
+        host: "127.0.0.1" as Hostname,
         port: serverPort(server),
         username: "testuser",
-        password: "testpass",
+        password: "testpass" as Password,
         tls: false,
       });
       const provider = yield* Effect.provide(ReceiveProvider, layer);
@@ -128,10 +130,11 @@ describe("IMAP Receive Provider", () => {
     Effect.gen(function* () {
       const server = yield* startMockImapServer({ 1: "test message" });
       const layer = ImapReceive.make({
-        host: "127.0.0.1",
+        provider: "imap" as const,
+        host: "127.0.0.1" as Hostname,
         port: serverPort(server),
         username: "testuser",
-        password: "testpass",
+        password: "testpass" as Password,
         tls: false,
       });
       const provider = yield* Effect.provide(ReceiveProvider, layer);
@@ -142,10 +145,11 @@ describe("IMAP Receive Provider", () => {
     Effect.gen(function* () {
       const server = yield* startMockImapServer({}, { loginFail: true });
       const layer = ImapReceive.make({
-        host: "127.0.0.1",
+        provider: "imap" as const,
+        host: "127.0.0.1" as Hostname,
         port: serverPort(server),
         username: "testuser",
-        password: "wrongpass",
+        password: "wrongpass" as Password,
         tls: false,
       });
       const provider = yield* Effect.provide(ReceiveProvider, layer);

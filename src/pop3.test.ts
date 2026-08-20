@@ -3,26 +3,11 @@
  * @description Level 1 protocol tests for POP3 — parser, response builders, and MailStore.
  */
 
-import { DateTime, Effect, Layer } from "effect";
+import { DateTime, Effect } from "effect";
 import { describe, it, expect } from "bun:test";
-import { ServerConfig } from "./config.ts";
 import * as Pop3Cmd from "./pop3.command.ts";
-import type { Email, Hostname, MessageId, MsgNum, Password } from "./schema.ts";
-import { MailStore, layer as mailStoreLayer } from "./store.ts";
-
-const testServerConfig = Layer.succeed(
-  ServerConfig,
-  ServerConfig.of({
-    hostname: "localhost" as Hostname,
-    smtpPort: 587,
-    pop3Port: 110,
-    pollInterval: 30,
-    maxMessages: 1000,
-    maxDataMb: 25,
-  }),
-);
-
-const testMailStoreLayer = mailStoreLayer.pipe(Layer.provide(testServerConfig));
+import type { Email, MessageId, MsgNum, Password } from "./schema.ts";
+import { MailStore } from "./store.ts";
 
 describe("POP3 Command Parser", () => {
   describe("parseLine", () => {
@@ -274,14 +259,14 @@ describe("MailStore", () => {
       expect(result).toHaveLength(2);
       expect(result[0]?.id).toBe("msg-1" as MessageId);
       expect(result[1]?.id).toBe("msg-2" as MessageId);
-    }).pipe(Effect.provide(testMailStoreLayer), Effect.runPromise));
+    }).pipe(Effect.provide(MailStore.layerTest()), Effect.runPromise));
 
   it("should return empty list for unknown account", () =>
     Effect.gen(function* () {
       const store = yield* MailStore;
       const result = yield* store.list("nobody@test.com" as Email);
       expect(result).toHaveLength(0);
-    }).pipe(Effect.provide(testMailStoreLayer), Effect.runPromise));
+    }).pipe(Effect.provide(MailStore.layerTest()), Effect.runPromise));
 
   it("should get message by 1-based index", () =>
     Effect.gen(function* () {
@@ -292,7 +277,7 @@ describe("MailStore", () => {
       ]);
       const result = yield* store.get("user@test.com" as Email, 2 as MsgNum);
       expect(result.id).toBe("msg-2" as MessageId);
-    }).pipe(Effect.provide(testMailStoreLayer), Effect.runPromise));
+    }).pipe(Effect.provide(MailStore.layerTest()), Effect.runPromise));
 
   it("should fail on get with out-of-range index", () =>
     Effect.gen(function* () {
@@ -300,7 +285,7 @@ describe("MailStore", () => {
       yield* store.addMessages("user@test.com" as Email, [makeTestMessage("msg-1", "Hello")]);
       return yield* store.get("user@test.com" as Email, 5 as MsgNum);
     }).pipe(
-      Effect.provide(testMailStoreLayer),
+      Effect.provide(MailStore.layerTest()),
       Effect.catchTag("ProtocolError", (e) => Effect.succeed({ failed: true, message: e.message })),
       Effect.map((result) => {
         expect(result).toEqual({ failed: true, message: "no such message 5" });
@@ -315,7 +300,7 @@ describe("MailStore", () => {
       yield* store.addMessages("user@test.com" as Email, [makeTestMessage("msg-1", content)]);
       const result = yield* store.size("user@test.com" as Email, 1 as MsgNum);
       expect(result).toBe(new TextEncoder().encode(content).byteLength);
-    }).pipe(Effect.provide(testMailStoreLayer), Effect.runPromise);
+    }).pipe(Effect.provide(MailStore.layerTest()), Effect.runPromise);
   });
 
   it("should compute totalSize across all messages", () =>
@@ -327,7 +312,7 @@ describe("MailStore", () => {
       ]);
       const result = yield* store.totalSize("user@test.com" as Email);
       expect(result).toBe(8);
-    }).pipe(Effect.provide(testMailStoreLayer), Effect.runPromise));
+    }).pipe(Effect.provide(MailStore.layerTest()), Effect.runPromise));
 
   it("should mark message as deleted and exclude from list", () =>
     Effect.gen(function* () {
@@ -342,7 +327,7 @@ describe("MailStore", () => {
       expect(result).toHaveLength(2);
       expect(result[0]?.id).toBe("msg-1" as MessageId);
       expect(result[1]?.id).toBe("msg-3" as MessageId);
-    }).pipe(Effect.provide(testMailStoreLayer), Effect.runPromise));
+    }).pipe(Effect.provide(MailStore.layerTest()), Effect.runPromise));
 
   it("should fail on markDelete with out-of-range index", () =>
     Effect.gen(function* () {
@@ -350,7 +335,7 @@ describe("MailStore", () => {
       yield* store.addMessages("user@test.com" as Email, [makeTestMessage("msg-1", "Hello")]);
       return yield* store.markDelete("user@test.com" as Email, 99 as MsgNum);
     }).pipe(
-      Effect.provide(testMailStoreLayer),
+      Effect.provide(MailStore.layerTest()),
       Effect.catchTag("ProtocolError", (e) => Effect.succeed({ failed: true, message: e.message })),
       Effect.map((result) => {
         expect(result).toEqual({ failed: true, message: "no such message 99" });
@@ -372,7 +357,7 @@ describe("MailStore", () => {
       // After commit + reset, deleted messages stay gone
       expect(result).toHaveLength(1);
       expect(result[0]?.id).toBe("msg-2" as MessageId);
-    }).pipe(Effect.provide(testMailStoreLayer), Effect.runPromise));
+    }).pipe(Effect.provide(MailStore.layerTest()), Effect.runPromise));
 
   it("should resetDeletes to restore marked messages before commit", () =>
     Effect.gen(function* () {
@@ -386,7 +371,7 @@ describe("MailStore", () => {
       const result = yield* store.list("user@test.com" as Email);
       // After reset without commit, all messages are restored
       expect(result).toHaveLength(2);
-    }).pipe(Effect.provide(testMailStoreLayer), Effect.runPromise));
+    }).pipe(Effect.provide(MailStore.layerTest()), Effect.runPromise));
 
   it("should isolate messages between accounts", () =>
     Effect.gen(function* () {
@@ -402,7 +387,7 @@ describe("MailStore", () => {
       const bob = yield* store.list("bob@test.com" as Email);
       expect(alice).toHaveLength(1);
       expect(bob).toHaveLength(2);
-    }).pipe(Effect.provide(testMailStoreLayer), Effect.runPromise));
+    }).pipe(Effect.provide(MailStore.layerTest()), Effect.runPromise));
 
   it("should reindex after delete so get uses active indices", () =>
     Effect.gen(function* () {
@@ -419,5 +404,5 @@ describe("MailStore", () => {
       const second = yield* store.get("user@test.com" as Email, 2 as MsgNum);
       expect(first.id).toBe("msg-2" as MessageId);
       expect(second.id).toBe("msg-3" as MessageId);
-    }).pipe(Effect.provide(testMailStoreLayer), Effect.runPromise));
+    }).pipe(Effect.provide(MailStore.layerTest()), Effect.runPromise));
 });

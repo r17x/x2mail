@@ -8,7 +8,7 @@ import * as HttpClient from "effect/unstable/http/HttpClient";
 import { signRequest } from "./aws.sigv4.ts";
 import { FetchError } from "./error.ts";
 import { ReceiveProvider } from "./receive.ts";
-import type { InboxMessage, MessageId } from "./schema.ts";
+import type { InboxMessage, MessageId, S3ReceiveConfig } from "./schema.ts";
 
 const xmlTag = (xml: string, tag: string) => {
   const match = xml.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));
@@ -29,12 +29,7 @@ const parseListResponse = (xml: string) => {
   return { objects, token, truncated };
 };
 
-export const make = (config: {
-  accessKeyId: string;
-  secretAccessKey: string;
-  region: string;
-  bucket: string;
-}) =>
+export const make = (config: typeof S3ReceiveConfig.Type) =>
   Layer.effect(
     ReceiveProvider,
     Effect.gen(function* () {
@@ -105,38 +100,35 @@ export const make = (config: {
         );
 
       return ReceiveProvider.of({
-        fetch: (since) =>
-          Effect.gen(function* () {
-            const objects = yield* listAll;
-            const sinceMs = DateTime.toEpochMillis(since);
-            const filtered = Arr.filter(
-              objects,
-              (obj) => DateTime.toEpochMillis(DateTime.makeUnsafe(obj.lastModified)) > sinceMs,
-            );
-            return yield* Effect.forEach(filtered, (obj) =>
-              Effect.gen(function* () {
-                const raw = yield* fetchObject(obj.key);
-                return {
-                  id: obj.key as MessageId,
-                  raw,
-                  receivedAt: DateTime.makeUnsafe(obj.lastModified),
-                } satisfies InboxMessage;
-              }),
-            );
-          }),
+        fetch: Effect.fn("ReceiveProvider.fetch.s3")(function* (since) {
+          const objects = yield* listAll;
+          const sinceMs = DateTime.toEpochMillis(since);
+          const filtered = Arr.filter(
+            objects,
+            (obj) => DateTime.toEpochMillis(DateTime.makeUnsafe(obj.lastModified)) > sinceMs,
+          );
+          return yield* Effect.forEach(filtered, (obj) =>
+            Effect.gen(function* () {
+              const raw = yield* fetchObject(obj.key);
+              return {
+                id: obj.key as MessageId,
+                raw,
+                receivedAt: DateTime.makeUnsafe(obj.lastModified),
+              } satisfies InboxMessage;
+            }),
+          );
+        }),
 
-        remove: (id) =>
-          Effect.gen(function* () {
-            const urlStr = `${baseUrl}/${encodeURIComponent(id)}`;
-            const opts = yield* signedRequest("DELETE", urlStr);
-            yield* s3client.del(urlStr, { headers: opts.headers });
-          }).pipe(
-            Effect.asVoid,
+        remove: Effect.fn("ReceiveProvider.remove.s3")(function* (id) {
+          const urlStr = `${baseUrl}/${encodeURIComponent(id)}`;
+          const opts = yield* signedRequest("DELETE", urlStr);
+          yield* s3client.del(urlStr, { headers: opts.headers }).pipe(
             Effect.scoped,
             Effect.mapError(
               (cause) => new FetchError({ message: `S3 delete object failed: ${id}`, cause }),
             ),
-          ),
+          );
+        }),
       });
     }),
   );

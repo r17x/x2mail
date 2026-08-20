@@ -1,11 +1,10 @@
 /**
  * @module config
- * @description x2mail config surface — Config entry point, ServerConfig service, and config loader.
+ * @description x2mail config surface — Config entry point, AppConfig service, and config loader.
  */
 
-import { Context, Data, Effect, Path, Runtime, Schema } from "effect";
-import { type ServerConfig as ServerConfigSchema, XhConfig } from "./schema.ts";
-export { Email, Password, MessageId, MsgNum, Hostname, Envelope, InboxMessage } from "./schema.ts";
+import { Context, Data, Effect, Layer, Path, Runtime, Schema } from "effect";
+import { type Account, ServerConfig as ServerConfigShape, XhConfig } from "./schema.ts";
 
 const Send = {
   resend: (cfg: { apiKey: string }) => ({ ...cfg, provider: "resend" as const }),
@@ -53,9 +52,25 @@ function make(config: unknown) {
 
 export const Config = { make, Send, Receive };
 
-export class ServerConfig extends Context.Service<ServerConfig, typeof ServerConfigSchema.Type>()(
-  "@x2mail/ServerConfig",
-) {}
+export class AppConfig extends Context.Service<
+  AppConfig,
+  {
+    readonly accounts: ReadonlyArray<Account>;
+    readonly server: typeof ServerConfigShape.Type;
+  }
+>()("@x2mail/AppConfig") {
+  static layerTest = (
+    impl?: Partial<{ accounts: ReadonlyArray<Account>; server: typeof ServerConfigShape.Type }>,
+  ) =>
+    Layer.succeed(
+      AppConfig,
+      AppConfig.of({
+        accounts: [],
+        server: Schema.decodeSync(ServerConfigShape)({}),
+        ...impl,
+      }),
+    );
+}
 
 export const parseConfig = (configPath: string) =>
   Effect.gen(function* () {

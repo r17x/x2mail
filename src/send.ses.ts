@@ -6,15 +6,12 @@
 import { Effect, Layer, Schedule, Schema } from "effect";
 import * as HttpBody from "effect/unstable/http/HttpBody";
 import * as HttpClient from "effect/unstable/http/HttpClient";
-import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse";
 import { signRequest } from "./aws.sigv4.ts";
 import { SendError } from "./error.ts";
-import type { MessageId } from "./schema.ts";
+import type { SesSendConfig } from "./schema.ts";
 import { SendProvider } from "./send.ts";
 
-const SesResponse = Schema.Struct({ MessageId: Schema.String });
-
-export const make = (config: { accessKeyId: string; secretAccessKey: string; region: string }) =>
+export const make = (config: typeof SesSendConfig.Type) =>
   Layer.effect(
     SendProvider,
     Effect.gen(function* () {
@@ -27,8 +24,8 @@ export const make = (config: { accessKeyId: string; secretAccessKey: string; reg
       const endpoint = `https://email.${config.region}.amazonaws.com/v2/email/outbound-emails`;
 
       return SendProvider.of({
-        send: (raw, _envelope) =>
-          Effect.gen(function* () {
+        send: Effect.fn("SendProvider.send.ses")(
+          function* (raw, _envelope) {
             const body = yield* Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown))({
               Content: { Raw: { Data: Buffer.from(raw).toString("base64") } },
             });
@@ -46,28 +43,29 @@ export const make = (config: { accessKeyId: string; secretAccessKey: string; reg
               service: "ses",
             });
 
-            return yield* ses
-              .post(endpoint, {
-                body: HttpBody.text(body, "application/json"),
-                headers: signed,
-              })
-              .pipe(
-                Effect.flatMap(HttpClientResponse.schemaBodyJson(SesResponse)),
-                Effect.map(({ MessageId: sesId }) => ({ messageId: sesId as MessageId })),
-              );
-          }).pipe(
-            Effect.tapErrorTag("HttpClientError", (e) =>
-              Effect.logWarning("ses API error", { cause: e }),
+            yield* ses.post(endpoint, {
+              body: HttpBody.text(body, "application/json"),
+              headers: signed,
+            });
+          },
+          (E) =>
+            E.pipe(
+              Effect.tapErrorTag("HttpClientError", (e) =>
+                Effect.logWarning("ses API error", { cause: e }),
+              ),
+              Effect.catchTags({
+                HttpClientError: (e) =>
+                  Effect.fail(new SendError({ message: `SES API error: ${e.message}`, cause: e })),
+                SchemaError: (e) =>
+                  Effect.fail(
+                    new SendError({
+                      message: `SES request encode failed: ${e.message}`,
+                      cause: e,
+                    }),
+                  ),
+              }),
             ),
-            Effect.catchTags({
-              HttpClientError: (e) =>
-                Effect.fail(new SendError({ message: `SES API error: ${e.message}`, cause: e })),
-              SchemaError: (e) =>
-                Effect.fail(
-                  new SendError({ message: `SES response decode failed: ${e.message}`, cause: e }),
-                ),
-            }),
-          ),
+        ),
       });
     }),
   );

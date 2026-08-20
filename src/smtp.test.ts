@@ -5,7 +5,7 @@
 
 import { Effect } from "effect";
 import { describe, it, expect } from "bun:test";
-import { AccountStore, make as makeAccountStore } from "./account.ts";
+import { AccountStore } from "./account.ts";
 import type { Email, Hostname, Password } from "./schema.ts";
 import * as SmtpCmd from "./smtp.command.ts";
 
@@ -292,13 +292,13 @@ describe("SMTP Session (AccountStore + SendProvider)", () => {
       expect(result.send?.provider === "resend" && result.send.apiKey).toBe("test-key");
     }).pipe(
       Effect.provide(
-        makeAccountStore([
+        AccountStore.layerTest({ accounts: [
           {
             email: "test@example.com" as Email,
             password: "secret" as Password,
             send: { provider: "resend" as const, apiKey: "test-key" },
           },
-        ]),
+        ] }),
       ),
       Effect.runPromise,
     ));
@@ -309,13 +309,13 @@ describe("SMTP Session (AccountStore + SendProvider)", () => {
       return yield* store.authenticate("test@example.com" as Email, "wrong" as Password);
     }).pipe(
       Effect.provide(
-        makeAccountStore([
+        AccountStore.layerTest({ accounts: [
           {
             email: "test@example.com" as Email,
             password: "secret" as Password,
             send: { provider: "resend" as const, apiKey: "test-key" },
           },
-        ]),
+        ] }),
       ),
       Effect.catchTag("ProtocolError", (e) =>
         Effect.succeed({ rejected: true, message: e.message }),
@@ -332,12 +332,12 @@ describe("SMTP Session (AccountStore + SendProvider)", () => {
       return yield* store.authenticate("unknown@example.com" as Email, "secret" as Password);
     }).pipe(
       Effect.provide(
-        makeAccountStore([
+        AccountStore.layerTest({ accounts: [
           {
             email: "test@example.com" as Email,
             password: "secret" as Password,
           },
-        ]),
+        ] }),
       ),
       Effect.catchTag("ProtocolError", (_e) => Effect.succeed({ rejected: true })),
       Effect.map((result) => {

@@ -3,11 +3,11 @@
  * Gmail API receive provider — fetches emails via Gmail REST API with OAuth2.
  */
 
-import { DateTime, Effect, Layer, Ref, Schema } from "effect";
+import { DateTime, Effect, Layer, Option, Ref, Schema, Stream } from "effect";
 import { HttpBody, HttpClient, HttpClientResponse } from "effect/unstable/http";
 import { FetchError } from "./error.ts";
 import { ReceiveProvider } from "./receive.ts";
-import type { InboxMessage, MessageId } from "./schema.ts";
+import type { GmailReceiveConfig, InboxMessage, MessageId } from "./schema.ts";
 
 const TokenResponse = Schema.Struct({
   access_token: Schema.String,
@@ -22,16 +22,10 @@ const GmailListResponse = Schema.Struct({
 const GmailMessageResponse = Schema.Struct({
   id: Schema.String,
   raw: Schema.String,
-  internalDate: Schema.optional(Schema.String),
+  internalDate: Schema.optional(Schema.FiniteFromString),
 });
 
-const base64UrlDecode = (s: string) => {
-  const padded = s.replace(/-/g, "+").replace(/_/g, "/");
-  const paddedFull = padded + "=".repeat((4 - (padded.length % 4)) % 4);
-  return new Uint8Array(Array.from(atob(paddedFull), (c) => c.charCodeAt(0)));
-};
-
-export const make = (config: { clientId: string; clientSecret: string; refreshToken: string }) =>
+export const make = (config: typeof GmailReceiveConfig.Type) =>
   Layer.effect(
     ReceiveProvider,
     Effect.gen(function* () {
@@ -96,19 +90,18 @@ export const make = (config: { clientId: string; clientSecret: string; refreshTo
           ),
         );
 
-      const listAll = (epoch: number) => {
-        const loop = (
-          accumulated: ReadonlyArray<{ id: string }>,
-          pageToken: string | undefined,
-        ): Effect.Effect<ReadonlyArray<{ id: string }>, FetchError> =>
-          Effect.gen(function* () {
+      const listAll = (epoch: number) =>
+        Stream.paginate(
+          undefined as string | undefined,
+          Effect.fn(function* (pageToken) {
             const page = yield* listPage(epoch, pageToken);
-            const all = [...accumulated, ...(page.messages ?? [])];
-            if (!page.nextPageToken) return all;
-            return yield* loop(all, page.nextPageToken);
-          });
-        return loop([], undefined);
-      };
+            const ids = page.messages ?? [];
+            return [
+              ids,
+              page.nextPageToken ? Option.some(page.nextPageToken) : Option.none<string>(),
+            ] as const;
+          }),
+        ).pipe(Stream.runCollect);
 
       const fetchMessage = (id: string) =>
         authedGet(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=raw`).pipe(
@@ -120,8 +113,8 @@ export const make = (config: { clientId: string; clientSecret: string; refreshTo
         );
 
       return ReceiveProvider.of({
-        fetch: (since) =>
-          Effect.gen(function* () {
+        fetch: Effect.fn("ReceiveProvider.fetch.gmail")(
+          function* (since) {
             const epoch = Math.floor(DateTime.toEpochMillis(since) / 1000);
             const messageIds = yield* listAll(epoch);
             return yield* Effect.forEach(messageIds, (msg) =>
@@ -129,26 +122,32 @@ export const make = (config: { clientId: string; clientSecret: string; refreshTo
                 const detail = yield* fetchMessage(msg.id);
                 return {
                   id: detail.id as MessageId,
-                  raw: base64UrlDecode(detail.raw),
-                  receivedAt:
-                    detail.internalDate && !Number.isNaN(Number(detail.internalDate))
-                      ? DateTime.makeUnsafe(Number(detail.internalDate))
-                      : since,
+                  raw: Buffer.from(detail.raw, "base64url"),
+                  receivedAt: detail.internalDate !== undefined
+                    ? DateTime.makeUnsafe(detail.internalDate)
+                    : since,
                 } satisfies InboxMessage;
               }),
             );
-          }).pipe(
-            Effect.mapError((cause) => new FetchError({ message: "Gmail fetch failed", cause })),
-          ),
+          },
+          (E) =>
+            E.pipe(
+              Effect.mapError(
+                (cause) => new FetchError({ message: "Gmail fetch failed", cause }),
+              ),
+            ),
+        ),
 
-        remove: (id) =>
-          authedPost(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}/trash`).pipe(
-            Effect.asVoid,
+        remove: Effect.fn("ReceiveProvider.remove.gmail")(function* (id) {
+          yield* authedPost(
+            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}/trash`,
+          ).pipe(
             Effect.scoped,
             Effect.mapError(
               (cause) => new FetchError({ message: `Gmail trash failed: ${id}`, cause }),
             ),
-          ),
+          );
+        }),
       });
     }),
   );

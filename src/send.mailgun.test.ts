@@ -7,7 +7,7 @@ import { Effect, Layer, Ref } from "effect";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import { describe, expect, it } from "bun:test";
 import { SendError } from "./error.ts";
-import type { Email, MessageId } from "./schema.ts";
+import type { Email } from "./schema.ts";
 import { SendProvider } from "./send.ts";
 import * as MailgunSend from "./send.mailgun.ts";
 
@@ -61,7 +61,7 @@ const testLayer = (
   captured: Ref.Ref<ReadonlyArray<CapturedRequest>>,
   respond: (req: Request) => Response,
 ) =>
-  MailgunSend.make({ apiKey: "test-key", domain: "mg.example.com" }).pipe(
+  MailgunSend.make({ provider: "mailgun" as const, apiKey: "test-key", domain: "mg.example.com" }).pipe(
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(makeMockFetch(captured, respond)),
   );
@@ -87,18 +87,6 @@ describe("MailgunSend Provider", () => {
       expect(req.formEntries["message"]).toMatch(/^\[Blob:/);
     }).pipe(Effect.scoped, Effect.runPromise));
 
-  it("should return messageId from Mailgun response", () =>
-    Effect.gen(function* () {
-      const captured = yield* Ref.make<ReadonlyArray<CapturedRequest>>([]);
-      const layer = testLayer(
-        captured,
-        () => new Response(JSON.stringify({ id: "<msg-xyz@mg.example.com>" }), { status: 200 }),
-      );
-      const provider = yield* Effect.provide(SendProvider, layer);
-      const result = yield* provider.send(rawMime, envelope);
-      expect(result.messageId).toBe("<msg-xyz@mg.example.com>" as MessageId);
-    }).pipe(Effect.scoped, Effect.runPromise));
-
   it("should fail with SendError on 4xx response", () =>
     Effect.gen(function* () {
       const captured = yield* Ref.make<ReadonlyArray<CapturedRequest>>([]);
@@ -122,15 +110,5 @@ describe("MailgunSend Provider", () => {
       const provider = yield* Effect.provide(SendProvider, layer);
       const result = yield* provider.send(rawMime, envelope).pipe(Effect.flip);
       expect(result).toBeInstanceOf(SendError);
-    }).pipe(Effect.scoped, Effect.runPromise));
-
-  it("should fail with SendError on malformed response body", () =>
-    Effect.gen(function* () {
-      const captured = yield* Ref.make<ReadonlyArray<CapturedRequest>>([]);
-      const layer = testLayer(captured, () => new Response("not json at all", { status: 200 }));
-      const provider = yield* Effect.provide(SendProvider, layer);
-      const result = yield* provider.send(rawMime, envelope).pipe(Effect.flip);
-      expect(result).toBeInstanceOf(SendError);
-      expect(result.message).toContain("Decode");
     }).pipe(Effect.scoped, Effect.runPromise));
 });

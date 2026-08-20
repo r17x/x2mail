@@ -12,6 +12,7 @@ import type { MessageId } from "./schema.ts";
 import * as R2Receive from "./receive.r2.ts";
 
 const testConfig = {
+  provider: "r2" as const,
   accountId: "test-account-id",
   apiToken: "test-api-token",
   bucket: "test-bucket",

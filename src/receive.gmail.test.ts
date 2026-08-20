@@ -12,6 +12,7 @@ import type { MessageId } from "./schema.ts";
 import * as GmailReceive from "./receive.gmail.ts";
 
 const testConfig = {
+  provider: "gmail" as const,
   clientId: "test-client-id",
   clientSecret: "test-client-secret",
   refreshToken: "test-refresh-token",

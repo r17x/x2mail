@@ -3,11 +3,11 @@
  * @description R2 receive provider — fetches emails from Cloudflare R2 bucket via CF API.
  */
 
-import { Array as Arr, DateTime, Effect, Layer, Schedule, Schema } from "effect";
+import { Array as Arr, DateTime, Effect, Layer, Option, Schedule, Schema, Stream } from "effect";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http";
 import { FetchError } from "./error.ts";
 import { ReceiveProvider } from "./receive.ts";
-import type { InboxMessage, MessageId } from "./schema.ts";
+import type { InboxMessage, MessageId, R2ReceiveConfig } from "./schema.ts";
 
 const R2Object = Schema.Struct({
   key: Schema.String,
@@ -26,7 +26,7 @@ const R2ListResponse = Schema.Struct({
 
 const decodeListResponse = HttpClientResponse.schemaBodyJson(R2ListResponse);
 
-export const make = (config: { accountId: string; apiToken: string; bucket: string }) =>
+export const make = (config: typeof R2ReceiveConfig.Type) =>
   Layer.effect(
     ReceiveProvider,
     Effect.gen(function* () {
@@ -53,19 +53,12 @@ export const make = (config: { accountId: string; apiToken: string; bucket: stri
             ),
           );
 
-      const listAll = (() => {
-        const loop = (
-          accumulated: ReadonlyArray<typeof R2Object.Type>,
-          cursor: string | undefined,
-        ): Effect.Effect<ReadonlyArray<typeof R2Object.Type>, FetchError> =>
-          Effect.gen(function* () {
-            const page = yield* listPage(cursor);
-            const all = [...accumulated, ...page.result];
-            if (!page.result_info.truncated) return all;
-            return yield* loop(all, page.result_info.cursor);
-          });
-        return loop([], undefined);
-      })();
+      const listAll = Stream.paginate(undefined as string | undefined, (cursor) =>
+        Effect.map(listPage(cursor), (page) => [
+          page.result,
+          page.result_info.truncated ? Option.some(page.result_info.cursor) : Option.none(),
+        ]),
+      ).pipe(Stream.runCollect);
 
       const fetchObject = (key: string) =>
         client.get(`${baseUrl}/${encodeURIComponent(key)}`).pipe(
@@ -78,34 +71,33 @@ export const make = (config: { accountId: string; apiToken: string; bucket: stri
         );
 
       return ReceiveProvider.of({
-        fetch: (since) =>
-          Effect.gen(function* () {
-            const objects = yield* listAll;
-            const sinceMs = DateTime.toEpochMillis(since);
-            const filtered = Arr.filter(
-              objects,
-              (obj) => DateTime.toEpochMillis(DateTime.makeUnsafe(obj.uploaded)) > sinceMs,
-            );
-            return yield* Effect.forEach(filtered, (obj) =>
-              Effect.gen(function* () {
-                const raw = yield* fetchObject(obj.key);
-                return {
-                  id: obj.key as MessageId,
-                  raw,
-                  receivedAt: DateTime.makeUnsafe(obj.uploaded),
-                } satisfies InboxMessage;
-              }),
-            );
-          }),
+        fetch: Effect.fn("ReceiveProvider.fetch.r2")(function* (since) {
+          const objects = yield* listAll;
+          const sinceMs = DateTime.toEpochMillis(since);
+          const filtered = Arr.filter(
+            objects,
+            (obj) => DateTime.toEpochMillis(DateTime.makeUnsafe(obj.uploaded)) > sinceMs,
+          );
+          return yield* Effect.forEach(filtered, (obj) =>
+            Effect.gen(function* () {
+              const raw = yield* fetchObject(obj.key);
+              return {
+                id: obj.key as MessageId,
+                raw,
+                receivedAt: DateTime.makeUnsafe(obj.uploaded),
+              } satisfies InboxMessage;
+            }),
+          );
+        }),
 
-        remove: (id) =>
-          client.del(`${baseUrl}/${encodeURIComponent(id)}`).pipe(
-            Effect.asVoid,
+        remove: Effect.fn("ReceiveProvider.remove.r2")(function* (id) {
+          yield* client.del(`${baseUrl}/${encodeURIComponent(id)}`).pipe(
             Effect.scoped,
             Effect.mapError(
               (cause) => new FetchError({ message: `R2 delete object failed: ${id}`, cause }),
             ),
-          ),
+          );
+        }),
       });
     }),
   );

@@ -5,10 +5,10 @@
 
 import * as tls from "node:tls";
 import * as BunSocket from "@effect/platform-bun/BunSocket";
-import { DateTime, Effect, Layer, Queue, Stream } from "effect";
+import { Effect, Layer, Queue, Stream } from "effect";
 import * as Socket from "effect/unstable/socket/Socket";
 import { SendError } from "./error.ts";
-import type { MessageId } from "./schema.ts";
+import type { SmtpRelaySendConfig } from "./schema.ts";
 import { SendProvider } from "./send.ts";
 
 const makeSocket = (config: { host: string; port: number; tls: boolean }) =>
@@ -45,100 +45,93 @@ const makeSocket = (config: { host: string; port: number; tls: boolean }) =>
       )
     : BunSocket.makeNet({ host: config.host, port: config.port });
 
-export const make = (config: {
-  host: string;
-  port: number;
-  username: string;
-  password: string;
-  tls?: boolean;
-}) =>
+export const make = (config: typeof SmtpRelaySendConfig.Type) =>
   Layer.succeed(
     SendProvider,
     SendProvider.of({
-      send: (raw, envelope) =>
-        Effect.scoped(
-          Effect.gen(function* () {
-            const socket = yield* makeSocket({
-              host: config.host,
-              port: config.port,
-              tls: config.tls ?? config.port === 465,
-            });
-            const write = yield* socket.writer;
+      send: Effect.fn("SendProvider.send.smtp")(
+        function* (raw, envelope) {
+          yield* Effect.scoped(
+            Effect.gen(function* () {
+              const socket = yield* makeSocket({
+                host: config.host,
+                port: config.port,
+                tls: config.port === 465,
+              });
+              const write = yield* socket.writer;
 
-            const lineQueue = yield* Stream.callback<string, Socket.SocketError>(
-              Effect.fnUntraced(function* (emit) {
-                yield* socket.runString((text) => Queue.offer(emit, text));
-              }),
-            ).pipe(
-              Stream.splitLines,
-              Stream.filter((l) => l.length > 0),
-              Stream.toQueue({ capacity: "unbounded" }),
-            );
-
-            const takeLine = Queue.take(lineQueue).pipe(
-              Effect.catchTag("Done", () =>
-                Effect.fail(new SendError({ message: "SMTP connection closed unexpectedly" })),
-              ),
-            );
-
-            const drainMultiLine = Effect.fnUntraced(function* (
-              expected: number,
-            ): Effect.fn.Return<string, SendError | Socket.SocketError> {
-              const line = yield* takeLine;
-              const code = parseInt(line.slice(0, 3), 10);
-              if (code !== expected)
-                return yield* new SendError({
-                  message: `SMTP expected ${expected}, got: ${line}`,
-                });
-              if (line[3] !== "-") return line;
-              return yield* drainMultiLine(expected);
-            });
-
-            yield* drainMultiLine(220);
-            yield* write("EHLO localhost\r\n");
-            yield* drainMultiLine(250);
-            yield* write(`AUTH PLAIN ${btoa("\0" + config.username + "\0" + config.password)}\r\n`);
-            yield* drainMultiLine(235);
-            yield* write(`MAIL FROM:<${envelope.from}>\r\n`);
-            yield* drainMultiLine(250);
-
-            yield* Effect.forEach(
-              envelope.to,
-              (to) =>
-                Effect.gen(function* () {
-                  yield* write(`RCPT TO:<${to}>\r\n`);
-                  yield* drainMultiLine(250);
+              const lineQueue = yield* Stream.callback<string, Socket.SocketError>(
+                Effect.fnUntraced(function* (emit) {
+                  yield* socket.runString((text) => Queue.offer(emit, text));
                 }),
-              { discard: true },
-            );
+              ).pipe(
+                Stream.splitLines,
+                Stream.filter((l) => l.length > 0),
+                Stream.toQueue({ capacity: "unbounded" }),
+              );
 
-            yield* write("DATA\r\n");
-            yield* drainMultiLine(354);
+              const takeLine = Queue.take(lineQueue).pipe(
+                Effect.catchTag("Done", () =>
+                  Effect.fail(new SendError({ message: "SMTP connection closed unexpectedly" })),
+                ),
+              );
 
-            const mimeText = new TextDecoder().decode(raw);
-            const lines = mimeText.split("\r\n");
-            const stuffed = lines.map((line) => (line.startsWith(".") ? "." + line : line));
-            yield* write(stuffed.join("\r\n") + "\r\n.\r\n");
+              const drainMultiLine = Effect.fnUntraced(function* (
+                expected: number,
+              ): Effect.fn.Return<string, SendError | Socket.SocketError> {
+                const line = yield* takeLine;
+                const code = parseInt(line.slice(0, 3), 10);
+                if (code !== expected)
+                  return yield* new SendError({
+                    message: `SMTP expected ${expected}, got: ${line}`,
+                  });
+                if (line[3] !== "-") return line;
+                return yield* drainMultiLine(expected);
+              });
 
-            const dataResponse = yield* drainMultiLine(250);
-            yield* write("QUIT\r\n");
-            yield* drainMultiLine(221);
+              yield* drainMultiLine(220);
+              yield* write("EHLO localhost\r\n");
+              yield* drainMultiLine(250);
+              yield* write(
+                `AUTH PLAIN ${btoa("\0" + config.username + "\0" + config.password)}\r\n`,
+              );
+              yield* drainMultiLine(235);
+              yield* write(`MAIL FROM:<${envelope.from}>\r\n`);
+              yield* drainMultiLine(250);
 
-            const idMatch =
-              dataResponse.match(/queued as (\S+)/i) ?? dataResponse.match(/id=(\S+)/i);
-            const now = yield* DateTime.now;
+              yield* Effect.forEach(
+                envelope.to,
+                (to) =>
+                  Effect.gen(function* () {
+                    yield* write(`RCPT TO:<${to}>\r\n`);
+                    yield* drainMultiLine(250);
+                  }),
+                { discard: true },
+              );
 
-            return {
-              messageId: (idMatch?.[1] ?? `smtp-${DateTime.toEpochMillis(now)}`) as MessageId,
-            };
-          }),
-        ).pipe(
-          Effect.tapErrorTag("SocketError", (e) =>
-            Effect.logWarning("smtp relay socket error", { cause: e }),
+              yield* write("DATA\r\n");
+              yield* drainMultiLine(354);
+
+              const mimeText = new TextDecoder().decode(raw);
+              const lines = mimeText.split("\r\n");
+              const stuffed = lines.map((line) => (line.startsWith(".") ? "." + line : line));
+              yield* write(stuffed.join("\r\n") + "\r\n.\r\n");
+
+              yield* drainMultiLine(250);
+              yield* write("QUIT\r\n");
+              yield* drainMultiLine(221);
+            }),
+          );
+        },
+        (E) =>
+          E.pipe(
+            Effect.tapErrorTag("SocketError", (e) =>
+              Effect.logWarning("smtp relay socket error", { cause: e }),
+            ),
+            Effect.catchTag("SocketError", (e) =>
+              Effect.fail(new SendError({ message: `SMTP relay error: ${e.message}`, cause: e })),
+            ),
           ),
-          Effect.catchTag("SocketError", (e) =>
-            Effect.fail(new SendError({ message: `SMTP relay error: ${e.message}`, cause: e })),
-          ),
-        ),
+      ),
     }),
   );

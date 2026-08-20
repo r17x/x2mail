@@ -7,7 +7,7 @@ import * as net from "node:net";
 import { Effect, Ref } from "effect";
 import { describe, expect, it } from "bun:test";
 import { SendError } from "./error.ts";
-import type { Email, MessageId } from "./schema.ts";
+import type { Email, Hostname, Password } from "./schema.ts";
 import { SendProvider } from "./send.ts";
 import * as SmtpSend from "./send.smtp.ts";
 
@@ -72,11 +72,11 @@ describe("SmtpSend Provider", () => {
       const captured = yield* Ref.make<ReadonlyArray<string>>([]);
       const server = yield* startMockSmtpServer(captured);
       const layer = SmtpSend.make({
-        host: "127.0.0.1",
+        provider: "smtp" as const,
+        host: "127.0.0.1" as Hostname,
         port: getPort(server),
         username: "user@test.com",
-        password: "secret",
-        tls: false,
+        password: "secret" as Password,
       });
       const provider = yield* Effect.provide(SendProvider, layer);
       yield* provider.send(rawMime, envelope);
@@ -90,23 +90,6 @@ describe("SmtpSend Provider", () => {
       expect(result.some((l) => l === "QUIT")).toBe(true);
     }).pipe(Effect.scoped, Effect.runPromise));
 
-  it("should return message ID from server response", () =>
-    Effect.gen(function* () {
-      const captured = yield* Ref.make<ReadonlyArray<string>>([]);
-      const server = yield* startMockSmtpServer(captured);
-      const layer = SmtpSend.make({
-        host: "127.0.0.1",
-        port: getPort(server),
-        username: "user@test.com",
-        password: "secret",
-        tls: false,
-      });
-      const provider = yield* Effect.provide(SendProvider, layer);
-      const result = yield* provider.send(rawMime, envelope);
-      server.close();
-      expect(result.messageId).toBe("mock-id-123" as MessageId);
-    }).pipe(Effect.scoped, Effect.runPromise));
-
   it("should handle multiple recipients", () => {
     const multiEnvelope = {
       from: "alice@example.com" as Email,
@@ -117,11 +100,11 @@ describe("SmtpSend Provider", () => {
       const captured = yield* Ref.make<ReadonlyArray<string>>([]);
       const server = yield* startMockSmtpServer(captured);
       const layer = SmtpSend.make({
-        host: "127.0.0.1",
+        provider: "smtp" as const,
+        host: "127.0.0.1" as Hostname,
         port: getPort(server),
         username: "user@test.com",
-        password: "secret",
-        tls: false,
+        password: "secret" as Password,
       });
       const provider = yield* Effect.provide(SendProvider, layer);
       yield* provider.send(rawMime, multiEnvelope);
@@ -144,11 +127,11 @@ describe("SmtpSend Provider", () => {
       const captured = yield* Ref.make<ReadonlyArray<string>>([]);
       const server = yield* startMockSmtpServer(captured);
       const layer = SmtpSend.make({
-        host: "127.0.0.1",
+        provider: "smtp" as const,
+        host: "127.0.0.1" as Hostname,
         port: getPort(server),
         username: "user@test.com",
-        password: "secret",
-        tls: false,
+        password: "secret" as Password,
       });
       const provider = yield* Effect.provide(SendProvider, layer);
       yield* provider.send(mimeWithDots, envelope);
@@ -171,11 +154,11 @@ describe("SmtpSend Provider", () => {
         return false;
       });
       const layer = SmtpSend.make({
-        host: "127.0.0.1",
+        provider: "smtp" as const,
+        host: "127.0.0.1" as Hostname,
         port: getPort(server),
         username: "bad@test.com",
-        password: "wrong",
-        tls: false,
+        password: "wrong" as Password,
       });
       const provider = yield* Effect.provide(SendProvider, layer);
       const result = yield* provider.send(rawMime, envelope).pipe(Effect.flip);

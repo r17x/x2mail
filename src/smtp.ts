@@ -9,10 +9,10 @@ import * as NodeSocketServer from "@effect/platform-bun/BunSocketServer";
 import { Effect, FileSystem, Match, pipe, Queue, Ref, Stream } from "effect";
 import type * as Socket from "effect/unstable/socket/Socket";
 import { AccountStore } from "./account.ts";
-import { ServerConfig } from "./config.ts";
+import { AppConfig } from "./config.ts";
 import { SendError, SessionDone } from "./error.ts";
 import type { Account, Email, Envelope, Password, TlsConfig } from "./schema.ts";
-import { makeSendLayer, SendProvider } from "./send.ts";
+import { SendProvider } from "./send.ts";
 import * as SmtpCmd from "./smtp.command.ts";
 
 type SmtpPhase = "greeting" | "ehlo" | "auth" | "mail" | "rcpt" | "data" | "quit";
@@ -146,9 +146,9 @@ const processLine = (
               ? Effect.gen(function* () {
                   const provider = yield* SendProvider;
                   return yield* provider.send(rawBytes, envelope);
-                }).pipe(Effect.provide(makeSendLayer(account.send)))
+                }).pipe(Effect.provide(SendProvider.layer(account.send)))
               : Effect.fail(new SendError({ message: "No send provider configured" })),
-            Effect.flatMap(() => write(SmtpCmd.ok("Message accepted"))),
+            Effect.andThen(write(SmtpCmd.ok("Message accepted"))),
             Effect.tapErrorTag("SendError", (e) => Effect.logWarning("send failed", { cause: e })),
             Effect.catchTag("SendError", (e) => write(SmtpCmd.tempError(e.message))),
           );
@@ -188,8 +188,8 @@ const processLine = (
 
 const handleSession = (socket: Socket.Socket) =>
   Effect.gen(function* () {
-    const config = yield* ServerConfig;
-    const maxDataBytes = config.maxDataMb * 1024 * 1024;
+    const { server } = yield* AppConfig;
+    const maxDataBytes = server.maxDataMb * 1024 * 1024;
     const write = yield* socket.writer;
     const ref = yield* Ref.make(initialState);
 
@@ -203,7 +203,7 @@ const handleSession = (socket: Socket.Socket) =>
       Effect.catchTag("Done", () => Effect.fail(new SessionDone())),
     );
 
-    yield* write(SmtpCmd.greeting(config.hostname));
+    yield* write(SmtpCmd.greeting(server.hostname));
     yield* Ref.update(ref, (s) => ({ ...s, phase: "ehlo" as const }));
 
     yield* Effect.forever(
@@ -213,7 +213,7 @@ const handleSession = (socket: Socket.Socket) =>
 
 export const run = (tlsConfig?: typeof TlsConfig.Type) =>
   Effect.gen(function* () {
-    const config = yield* ServerConfig;
+    const { server: config } = yield* AppConfig;
     const port = config.smtpPort;
 
     if (tlsConfig) {
