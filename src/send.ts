@@ -16,10 +16,7 @@ import * as SmtpSend from "./send.smtp.ts";
 export class SendProvider extends Context.Service<
   SendProvider,
   {
-    readonly send: (
-      raw: Uint8Array,
-      envelope: Envelope,
-    ) => Effect.Effect<void, SendError>;
+    readonly send: (raw: Uint8Array, envelope: Envelope) => Effect.Effect<void, SendError>;
   }
 >()("@x2mail/SendProvider") {
   static layer = (config: AccountSendConfig) =>

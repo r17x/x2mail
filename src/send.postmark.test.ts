@@ -54,10 +54,10 @@ const testLayer = (
   captured: Ref.Ref<ReadonlyArray<CapturedRequest>>,
   respond: (req: Request) => Response,
 ) =>
-  PostmarkSend.make({ provider: "postmark" as const, serverToken: "pmak_test_server_token_123" }).pipe(
-    Layer.provide(FetchHttpClient.layer),
-    Layer.provide(makeMockFetch(captured, respond)),
-  );
+  PostmarkSend.make({
+    provider: "postmark" as const,
+    serverToken: "pmak_test_server_token_123",
+  }).pipe(Layer.provide(FetchHttpClient.layer), Layer.provide(makeMockFetch(captured, respond)));
 
 describe("PostmarkSend Provider", () => {
   it("should POST raw MIME as base64 JSON to Postmark API with correct headers", () =>

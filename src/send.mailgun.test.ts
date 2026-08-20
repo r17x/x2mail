@@ -61,10 +61,11 @@ const testLayer = (
   captured: Ref.Ref<ReadonlyArray<CapturedRequest>>,
   respond: (req: Request) => Response,
 ) =>
-  MailgunSend.make({ provider: "mailgun" as const, apiKey: "test-key", domain: "mg.example.com" }).pipe(
-    Layer.provide(FetchHttpClient.layer),
-    Layer.provide(makeMockFetch(captured, respond)),
-  );
+  MailgunSend.make({
+    provider: "mailgun" as const,
+    apiKey: "test-key",
+    domain: "mg.example.com",
+  }).pipe(Layer.provide(FetchHttpClient.layer), Layer.provide(makeMockFetch(captured, respond)));
 
 describe("MailgunSend Provider", () => {
   it("should POST raw MIME as FormData to Mailgun API with correct auth", () =>

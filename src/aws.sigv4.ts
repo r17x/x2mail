@@ -27,7 +27,10 @@ const hmacHex = (key: Uint8Array<ArrayBuffer>, data: Uint8Array<ArrayBuffer>) =>
   );
 
 const deriveSigningKey = (secretKey: string, dateStamp: string, region: string, service: string) =>
-  hmacSign(new Uint8Array(new TextEncoder().encode("AWS4" + secretKey)), new Uint8Array(new TextEncoder().encode(dateStamp))).pipe(
+  hmacSign(
+    new Uint8Array(new TextEncoder().encode("AWS4" + secretKey)),
+    new Uint8Array(new TextEncoder().encode(dateStamp)),
+  ).pipe(
     Effect.flatMap((k) => hmacSign(k, new Uint8Array(new TextEncoder().encode(region)))),
     Effect.flatMap((k) => hmacSign(k, new Uint8Array(new TextEncoder().encode(service)))),
     Effect.flatMap((k) => hmacSign(k, new Uint8Array(new TextEncoder().encode("aws4_request")))),
@@ -48,7 +51,10 @@ export const signRequest = (params: {
     const dateStamp = amzDate.slice(0, 8);
     const scope = `${dateStamp}/${params.region}/${params.service}/aws4_request`;
 
-    const bodyBytes = typeof params.body === "string" ? new Uint8Array(new TextEncoder().encode(params.body)) : params.body;
+    const bodyBytes =
+      typeof params.body === "string"
+        ? new Uint8Array(new TextEncoder().encode(params.body))
+        : params.body;
     const payloadHash = yield* sha256Hex(bodyBytes);
 
     const headersWithDate: Record<string, string> = {
@@ -82,7 +88,9 @@ export const signRequest = (params: {
       payloadHash,
     ].join("\n");
 
-    const canonicalRequestHash = yield* sha256Hex(new Uint8Array(new TextEncoder().encode(canonicalRequest)));
+    const canonicalRequestHash = yield* sha256Hex(
+      new Uint8Array(new TextEncoder().encode(canonicalRequest)),
+    );
     const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${scope}\n${canonicalRequestHash}`;
 
     const signingKey = yield* deriveSigningKey(
@@ -91,7 +99,10 @@ export const signRequest = (params: {
       params.region,
       params.service,
     );
-    const signature = yield* hmacHex(signingKey, new Uint8Array(new TextEncoder().encode(stringToSign)));
+    const signature = yield* hmacHex(
+      signingKey,
+      new Uint8Array(new TextEncoder().encode(stringToSign)),
+    );
 
     return {
       ...headersWithDate,

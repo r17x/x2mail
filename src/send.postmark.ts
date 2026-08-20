@@ -17,7 +17,9 @@ export const make = (config: typeof PostmarkSendConfig.Type) =>
     Effect.gen(function* () {
       const client = yield* HttpClient.HttpClient;
       const postmark = client.pipe(
-        HttpClient.mapRequest(HttpClientRequest.setHeader("X-Postmark-Server-Token", config.serverToken)),
+        HttpClient.mapRequest(
+          HttpClientRequest.setHeader("X-Postmark-Server-Token", config.serverToken),
+        ),
         HttpClient.mapRequest(HttpClientRequest.accept("application/json")),
         HttpClient.retryTransient({ schedule: Schedule.exponential("200 millis"), times: 3 }),
         HttpClient.filterStatusOk,

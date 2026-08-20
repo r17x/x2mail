@@ -147,7 +147,6 @@ export class MailStore extends Context.Service<
     }),
   );
 
-  static layerTest = (
-    impl?: Parameters<typeof AppConfig.layerTest>[0],
-  ) => MailStore.layer.pipe(Layer.provide(AppConfig.layerTest(impl)));
+  static layerTest = (impl?: Parameters<typeof AppConfig.layerTest>[0]) =>
+    MailStore.layer.pipe(Layer.provide(AppConfig.layerTest(impl)));
 }

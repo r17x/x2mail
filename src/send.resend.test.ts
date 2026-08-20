@@ -64,10 +64,7 @@ describe("ResendSend Provider", () => {
   it("should POST raw MIME to Resend API with correct headers", () =>
     Effect.gen(function* () {
       const captured = yield* Ref.make<ReadonlyArray<CapturedRequest>>([]);
-      const layer = testLayer(
-        captured,
-        () => new Response("", { status: 200 }),
-      );
+      const layer = testLayer(captured, () => new Response("", { status: 200 }));
       const provider = yield* Effect.provide(SendProvider, layer);
       yield* provider.send(rawMime, envelope);
       const result = yield* Ref.get(captured);

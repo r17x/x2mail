@@ -123,18 +123,17 @@ export const make = (config: typeof GmailReceiveConfig.Type) =>
                 return {
                   id: detail.id as MessageId,
                   raw: Buffer.from(detail.raw, "base64url"),
-                  receivedAt: detail.internalDate !== undefined
-                    ? DateTime.makeUnsafe(detail.internalDate)
-                    : since,
+                  receivedAt:
+                    detail.internalDate !== undefined
+                      ? DateTime.makeUnsafe(detail.internalDate)
+                      : since,
                 } satisfies InboxMessage;
               }),
             );
           },
           (E) =>
             E.pipe(
-              Effect.mapError(
-                (cause) => new FetchError({ message: "Gmail fetch failed", cause }),
-              ),
+              Effect.mapError((cause) => new FetchError({ message: "Gmail fetch failed", cause })),
             ),
         ),
 

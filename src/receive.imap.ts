@@ -58,7 +58,9 @@ export const make = (config: typeof ImapReceiveConfig.Type) =>
       const session = <A>(
         body: (s: {
           sendCommand: (cmd: string) => Effect.Effect<string, FetchError | Socket.SocketError>;
-          readUntilTagged: (tag: string) => Effect.Effect<string[], FetchError | Socket.SocketError>;
+          readUntilTagged: (
+            tag: string,
+          ) => Effect.Effect<string[], FetchError | Socket.SocketError>;
         }) => Effect.Effect<A, FetchError | Socket.SocketError>,
       ) =>
         Effect.scoped(

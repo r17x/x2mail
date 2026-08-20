@@ -35,7 +35,6 @@ export class AccountStore extends Context.Service<
     }),
   );
 
-  static layerTest = (
-    impl?: Parameters<typeof AppConfig.layerTest>[0],
-  ) => AccountStore.layer.pipe(Layer.provide(AppConfig.layerTest(impl)));
+  static layerTest = (impl?: Parameters<typeof AppConfig.layerTest>[0]) =>
+    AccountStore.layer.pipe(Layer.provide(AppConfig.layerTest(impl)));
 }

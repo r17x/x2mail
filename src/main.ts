@@ -90,13 +90,13 @@ const x2mail = Command.make("x2mail", {
         );
 
         const appLayer = Layer.mergeAll(AccountStore.layer, MailStore.layer).pipe(
-          Layer.provideMerge(Layer.succeed(AppConfig, AppConfig.of({ accounts, server: finalServer }))),
+          Layer.provideMerge(
+            Layer.succeed(AppConfig, AppConfig.of({ accounts, server: finalServer })),
+          ),
         );
 
         const loggerLayer = Logger.layer(
-          log === "stdout"
-            ? [Logger.defaultLogger]
-            : [Logger.toFile(Logger.formatSimple, log)],
+          log === "stdout" ? [Logger.defaultLogger] : [Logger.toFile(Logger.formatSimple, log)],
         );
 
         yield* Effect.all([SmtpServer.run(), Pop3Server.run, Poller.start], {

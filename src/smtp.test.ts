@@ -292,13 +292,15 @@ describe("SMTP Session (AccountStore + SendProvider)", () => {
       expect(result.send?.provider === "resend" && result.send.apiKey).toBe("test-key");
     }).pipe(
       Effect.provide(
-        AccountStore.layerTest({ accounts: [
-          {
-            email: "test@example.com" as Email,
-            password: "secret" as Password,
-            send: { provider: "resend" as const, apiKey: "test-key" },
-          },
-        ] }),
+        AccountStore.layerTest({
+          accounts: [
+            {
+              email: "test@example.com" as Email,
+              password: "secret" as Password,
+              send: { provider: "resend" as const, apiKey: "test-key" },
+            },
+          ],
+        }),
       ),
       Effect.runPromise,
     ));
@@ -309,13 +311,15 @@ describe("SMTP Session (AccountStore + SendProvider)", () => {
       return yield* store.authenticate("test@example.com" as Email, "wrong" as Password);
     }).pipe(
       Effect.provide(
-        AccountStore.layerTest({ accounts: [
-          {
-            email: "test@example.com" as Email,
-            password: "secret" as Password,
-            send: { provider: "resend" as const, apiKey: "test-key" },
-          },
-        ] }),
+        AccountStore.layerTest({
+          accounts: [
+            {
+              email: "test@example.com" as Email,
+              password: "secret" as Password,
+              send: { provider: "resend" as const, apiKey: "test-key" },
+            },
+          ],
+        }),
       ),
       Effect.catchTag("ProtocolError", (e) =>
         Effect.succeed({ rejected: true, message: e.message }),
@@ -332,12 +336,14 @@ describe("SMTP Session (AccountStore + SendProvider)", () => {
       return yield* store.authenticate("unknown@example.com" as Email, "secret" as Password);
     }).pipe(
       Effect.provide(
-        AccountStore.layerTest({ accounts: [
-          {
-            email: "test@example.com" as Email,
-            password: "secret" as Password,
-          },
-        ] }),
+        AccountStore.layerTest({
+          accounts: [
+            {
+              email: "test@example.com" as Email,
+              password: "secret" as Password,
+            },
+          ],
+        }),
       ),
       Effect.catchTag("ProtocolError", (_e) => Effect.succeed({ rejected: true })),
       Effect.map((result) => {
