@@ -16,7 +16,6 @@
     "noUncheckedIndexedAccess": true,
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
-    "allowImportingTsExtensions": true,
     "plugins": [
       {
         "name": "@effect/language-service",
