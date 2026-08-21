@@ -6,10 +6,10 @@
 import * as net from "node:net";
 import { Effect, Ref } from "effect";
 import { describe, expect, it } from "bun:test";
-import { SendError } from "./error.ts";
-import type { Email, Hostname, Password } from "./schema.ts";
-import { SendProvider } from "./send.ts";
-import * as SmtpSend from "./send.smtp.ts";
+import { SendError } from "./error";
+import type { Email, Hostname, Password } from "./schema";
+import { SendProvider } from "./send";
+import * as SmtpSend from "./send.smtp";
 
 const encoder = new TextEncoder();
 

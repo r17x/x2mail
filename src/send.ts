@@ -5,13 +5,13 @@
 
 import { Context, Match } from "effect";
 import type { Effect } from "effect";
-import type { Envelope, AccountSendConfig } from "./schema.ts";
-import type { SendError } from "./error.ts";
-import * as MailgunSend from "./send.mailgun.ts";
-import * as PostmarkSend from "./send.postmark.ts";
-import * as ResendSend from "./send.resend.ts";
-import * as SesSend from "./send.ses.ts";
-import * as SmtpSend from "./send.smtp.ts";
+import type { Envelope, AccountSendConfig } from "./schema";
+import type { SendError } from "./error";
+import * as MailgunSend from "./send.mailgun";
+import * as PostmarkSend from "./send.postmark";
+import * as ResendSend from "./send.resend";
+import * as SesSend from "./send.ses";
+import * as SmtpSend from "./send.smtp";
 
 export class SendProvider extends Context.Service<
   SendProvider,

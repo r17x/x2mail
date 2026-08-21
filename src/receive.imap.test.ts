@@ -6,10 +6,10 @@
 import * as net from "node:net";
 import { DateTime, Effect } from "effect";
 import { describe, expect, it } from "bun:test";
-import { FetchError } from "./error.ts";
-import { ReceiveProvider } from "./receive.ts";
-import type { Hostname, MessageId, Password } from "./schema.ts";
-import * as ImapReceive from "./receive.imap.ts";
+import { FetchError } from "./error";
+import { ReceiveProvider } from "./receive";
+import type { Hostname, MessageId, Password } from "./schema";
+import * as ImapReceive from "./receive.imap";
 
 const startMockImapServer = (messages: Record<number, string>, options?: { loginFail?: boolean }) =>
   Effect.acquireRelease(

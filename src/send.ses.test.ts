@@ -6,10 +6,10 @@
 import { Effect, Layer, Ref, Schema } from "effect";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import { describe, expect, it } from "bun:test";
-import { SendError } from "./error.ts";
-import type { Email } from "./schema.ts";
-import { SendProvider } from "./send.ts";
-import * as SesSend from "./send.ses.ts";
+import { SendError } from "./error";
+import type { Email } from "./schema";
+import { SendProvider } from "./send";
+import * as SesSend from "./send.ses";
 
 const encoder = new TextEncoder();
 

@@ -5,10 +5,10 @@
 
 import { Array as Arr, DateTime, Effect, Layer, Option, Schedule, Stream } from "effect";
 import * as HttpClient from "effect/unstable/http/HttpClient";
-import { signRequest } from "./aws.sigv4.ts";
-import { FetchError } from "./error.ts";
-import { ReceiveProvider } from "./receive.ts";
-import type { InboxMessage, MessageId, S3ReceiveConfig } from "./schema.ts";
+import { signRequest } from "./aws.sigv4";
+import { FetchError } from "./error";
+import { ReceiveProvider } from "./receive";
+import type { InboxMessage, MessageId, S3ReceiveConfig } from "./schema";
 
 const xmlTag = (xml: string, tag: string) => {
   const match = xml.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));

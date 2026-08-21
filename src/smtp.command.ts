@@ -4,7 +4,7 @@
  */
 
 import { Match, Schema, String as Str } from "effect";
-import { Email, Hostname } from "./schema.ts";
+import { Email, Hostname } from "./schema";
 
 export const SmtpCommand = Schema.TaggedUnion({
   Ehlo: { host: Hostname },

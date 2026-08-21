@@ -5,9 +5,9 @@
 
 import { DateTime, Effect } from "effect";
 import { describe, it, expect } from "bun:test";
-import * as Pop3Cmd from "./pop3.command.ts";
-import type { Email, MessageId, MsgNum, Password } from "./schema.ts";
-import { MailStore } from "./store.ts";
+import * as Pop3Cmd from "./pop3.command";
+import type { Email, MessageId, MsgNum, Password } from "./schema";
+import { MailStore } from "./store";
 
 describe("POP3 Command Parser", () => {
   describe("parseLine", () => {

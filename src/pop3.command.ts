@@ -4,7 +4,7 @@
  */
 
 import { Match, Schema, String as Str } from "effect";
-import { Email, MsgNum, Password } from "./schema.ts";
+import { Email, MsgNum, Password } from "./schema";
 
 export const Pop3Command = Schema.TaggedUnion({
   User: { name: Email },

@@ -4,7 +4,7 @@
  */
 
 import { Context, Data, Effect, Layer, Path, Runtime, Schema } from "effect";
-import { type Account, ServerConfig as ServerConfigShape, XhConfig } from "./schema.ts";
+import { type Account, ServerConfig as ServerConfigShape, XhConfig } from "./schema";
 
 const Send = {
   resend: (cfg: { apiKey: string }) => ({ ...cfg, provider: "resend" as const }),

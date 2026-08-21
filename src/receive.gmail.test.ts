@@ -6,10 +6,10 @@
 import { DateTime, Effect, Layer, Ref } from "effect";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import { describe, expect, it } from "bun:test";
-import { FetchError } from "./error.ts";
-import { ReceiveProvider } from "./receive.ts";
-import type { MessageId } from "./schema.ts";
-import * as GmailReceive from "./receive.gmail.ts";
+import { FetchError } from "./error";
+import { ReceiveProvider } from "./receive";
+import type { MessageId } from "./schema";
+import * as GmailReceive from "./receive.gmail";
 
 const testConfig = {
   provider: "gmail" as const,

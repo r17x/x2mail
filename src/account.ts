@@ -4,9 +4,9 @@
  */
 
 import { Array as Arr, Context, Effect, Layer, pipe } from "effect";
-import { AppConfig } from "./config.ts";
-import { ProtocolError } from "./error.ts";
-import type { Account, Email, Password } from "./schema.ts";
+import { AppConfig } from "./config";
+import { ProtocolError } from "./error";
+import type { Account, Email, Password } from "./schema";
 
 export class AccountStore extends Context.Service<
   AccountStore,

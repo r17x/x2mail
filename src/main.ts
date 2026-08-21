@@ -5,12 +5,12 @@
 
 import { Console, Data, Effect, FileSystem, Layer, Logger, Option, Runtime } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
-import { AppConfig, parseConfig } from "./config.ts";
-import { AccountStore } from "./account.ts";
-import { MailStore } from "./store.ts";
-import * as SmtpServer from "./smtp.ts";
-import * as Pop3Server from "./pop3.ts";
-import * as Poller from "./poller.ts";
+import { AppConfig, parseConfig } from "./config";
+import { AccountStore } from "./account";
+import { MailStore } from "./store";
+import * as SmtpServer from "./smtp";
+import * as Pop3Server from "./pop3";
+import * as Poller from "./poller";
 
 const configTemplate = `import { Config } from "x2mail";
 

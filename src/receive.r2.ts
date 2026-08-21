@@ -5,9 +5,9 @@
 
 import { Array as Arr, DateTime, Effect, Layer, Option, Schedule, Schema, Stream } from "effect";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http";
-import { FetchError } from "./error.ts";
-import { ReceiveProvider } from "./receive.ts";
-import type { InboxMessage, MessageId, R2ReceiveConfig } from "./schema.ts";
+import { FetchError } from "./error";
+import { ReceiveProvider } from "./receive";
+import type { InboxMessage, MessageId, R2ReceiveConfig } from "./schema";
 
 const R2Object = Schema.Struct({
   key: Schema.String,

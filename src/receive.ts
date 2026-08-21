@@ -4,12 +4,12 @@
  */
 
 import { Context, type Effect, Match, type DateTime } from "effect";
-import type { FetchError } from "./error.ts";
-import type { InboxMessage, AccountReceiveConfig, MessageId } from "./schema.ts";
-import * as GmailReceive from "./receive.gmail.ts";
-import * as ImapReceive from "./receive.imap.ts";
-import * as R2Receive from "./receive.r2.ts";
-import * as S3Receive from "./receive.s3.ts";
+import type { FetchError } from "./error";
+import type { InboxMessage, AccountReceiveConfig, MessageId } from "./schema";
+import * as GmailReceive from "./receive.gmail";
+import * as ImapReceive from "./receive.imap";
+import * as R2Receive from "./receive.r2";
+import * as S3Receive from "./receive.s3";
 
 export class ReceiveProvider extends Context.Service<
   ReceiveProvider,

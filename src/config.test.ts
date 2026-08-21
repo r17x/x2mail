@@ -5,8 +5,8 @@
 
 import { Config, ConfigProvider, Effect, Schema } from "effect";
 import { describe, expect, it } from "bun:test";
-import type { Email, Hostname, Password } from "./schema.ts";
-import { XhConfig } from "./schema.ts";
+import type { Email, Hostname, Password } from "./schema";
+import { XhConfig } from "./schema";
 
 describe("Config trust boundary", () => {
   it("should decode valid XhConfig from Effect default export", () =>

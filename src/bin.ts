@@ -6,8 +6,8 @@ import * as BunServices from "@effect/platform-bun/BunServices";
 import * as FetchHttpClient from "@effect/platform-bun/BunHttpClient";
 import { Command } from "effect/unstable/cli";
 import pkg from "../package.json";
-import { cli } from "./main.ts";
-import { Config } from "./config.ts";
+import { cli } from "./main";
+import { Config } from "./config";
 
 plugin({
   name: "x2mail",

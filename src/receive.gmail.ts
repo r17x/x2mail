@@ -5,9 +5,9 @@
 
 import { DateTime, Effect, Layer, Option, Ref, Schema, Stream } from "effect";
 import { HttpBody, HttpClient, HttpClientResponse } from "effect/unstable/http";
-import { FetchError } from "./error.ts";
-import { ReceiveProvider } from "./receive.ts";
-import type { GmailReceiveConfig, InboxMessage, MessageId } from "./schema.ts";
+import { FetchError } from "./error";
+import { ReceiveProvider } from "./receive";
+import type { GmailReceiveConfig, InboxMessage, MessageId } from "./schema";
 
 const TokenResponse = Schema.Struct({
   access_token: Schema.String,

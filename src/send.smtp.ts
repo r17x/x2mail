@@ -7,9 +7,9 @@ import * as tls from "node:tls";
 import * as BunSocket from "@effect/platform-bun/BunSocket";
 import { Effect, Layer, Queue, Stream } from "effect";
 import * as Socket from "effect/unstable/socket/Socket";
-import { SendError } from "./error.ts";
-import type { SmtpRelaySendConfig } from "./schema.ts";
-import { SendProvider } from "./send.ts";
+import { SendError } from "./error";
+import type { SmtpRelaySendConfig } from "./schema";
+import { SendProvider } from "./send";
 
 const makeSocket = (config: { host: string; port: number; tls: boolean }) =>
   config.tls

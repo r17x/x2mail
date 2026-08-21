@@ -6,12 +6,12 @@
 import { Array as Arr, Effect, Match, pipe, Queue, Ref, Stream } from "effect";
 import type * as Socket from "effect/unstable/socket/Socket";
 import * as NodeSocketServer from "@effect/platform-bun/BunSocketServer";
-import * as Pop3Cmd from "./pop3.command.ts";
-import { AccountStore } from "./account.ts";
-import { AppConfig } from "./config.ts";
-import { SessionDone } from "./error.ts";
-import { MailStore } from "./store.ts";
-import type { Account, Email } from "./schema.ts";
+import * as Pop3Cmd from "./pop3.command";
+import { AccountStore } from "./account";
+import { AppConfig } from "./config";
+import { SessionDone } from "./error";
+import { MailStore } from "./store";
+import type { Account, Email } from "./schema";
 
 type Pop3Phase = "auth_user" | "auth_pass" | "transaction" | "quit";
 

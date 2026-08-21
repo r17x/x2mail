@@ -7,9 +7,9 @@ import { Effect, Layer, Schedule } from "effect";
 import * as HttpBody from "effect/unstable/http/HttpBody";
 import * as HttpClient from "effect/unstable/http/HttpClient";
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
-import { SendError } from "./error.ts";
-import type { PostmarkSendConfig } from "./schema.ts";
-import { SendProvider } from "./send.ts";
+import { SendError } from "./error";
+import type { PostmarkSendConfig } from "./schema";
+import { SendProvider } from "./send";
 
 export const make = (config: typeof PostmarkSendConfig.Type) =>
   Layer.effect(

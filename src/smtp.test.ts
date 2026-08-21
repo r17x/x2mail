@@ -5,9 +5,9 @@
 
 import { Effect } from "effect";
 import { describe, it, expect } from "bun:test";
-import { AccountStore } from "./account.ts";
-import type { Email, Hostname, Password } from "./schema.ts";
-import * as SmtpCmd from "./smtp.command.ts";
+import { AccountStore } from "./account";
+import type { Email, Hostname, Password } from "./schema";
+import * as SmtpCmd from "./smtp.command";
 
 describe("SMTP Command Parser", () => {
   describe("parseLine in command mode", () => {

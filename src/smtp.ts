@@ -8,12 +8,12 @@ import * as BunSocket from "@effect/platform-bun/BunSocket";
 import * as NodeSocketServer from "@effect/platform-bun/BunSocketServer";
 import { Effect, FileSystem, Match, pipe, Queue, Ref, Stream } from "effect";
 import type * as Socket from "effect/unstable/socket/Socket";
-import { AccountStore } from "./account.ts";
-import { AppConfig } from "./config.ts";
-import { SendError, SessionDone } from "./error.ts";
-import type { Account, Email, Envelope, Password, TlsConfig } from "./schema.ts";
-import { SendProvider } from "./send.ts";
-import * as SmtpCmd from "./smtp.command.ts";
+import { AccountStore } from "./account";
+import { AppConfig } from "./config";
+import { SendError, SessionDone } from "./error";
+import type { Account, Email, Envelope, Password, TlsConfig } from "./schema";
+import { SendProvider } from "./send";
+import * as SmtpCmd from "./smtp.command";
 
 type SmtpPhase = "greeting" | "ehlo" | "auth" | "mail" | "rcpt" | "data" | "quit";
 

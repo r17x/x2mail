@@ -4,9 +4,9 @@
  */
 
 import { Array as Arr, Context, Effect, HashMap, Layer, Option, pipe, Ref } from "effect";
-import { AppConfig } from "./config.ts";
-import { ProtocolError } from "./error.ts";
-import type { Email, InboxMessage, MsgNum } from "./schema.ts";
+import { AppConfig } from "./config";
+import { ProtocolError } from "./error";
+import type { Email, InboxMessage, MsgNum } from "./schema";
 
 type StoredMessage = {
   readonly message: InboxMessage;

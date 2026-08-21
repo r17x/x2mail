@@ -4,10 +4,10 @@
  */
 
 import { Array as Arr, DateTime, Duration, Effect, Ref, Schedule } from "effect";
-import type { Account } from "./schema.ts";
-import { AppConfig } from "./config.ts";
-import { MailStore } from "./store.ts";
-import { ReceiveProvider } from "./receive.ts";
+import type { Account } from "./schema";
+import { AppConfig } from "./config";
+import { MailStore } from "./store";
+import { ReceiveProvider } from "./receive";
 
 export const start = Effect.gen(function* () {
   const { accounts, server } = yield* AppConfig;

@@ -8,9 +8,9 @@ import * as tls from "node:tls";
 import * as BunSocket from "@effect/platform-bun/BunSocket";
 import { Array as Arr, DateTime, Effect, Layer, Option, Queue, Ref, Stream } from "effect";
 import * as Socket from "effect/unstable/socket/Socket";
-import { FetchError } from "./error.ts";
-import { ReceiveProvider } from "./receive.ts";
-import type { ImapReceiveConfig, InboxMessage, MessageId } from "./schema.ts";
+import { FetchError } from "./error";
+import { ReceiveProvider } from "./receive";
+import type { ImapReceiveConfig, InboxMessage, MessageId } from "./schema";
 
 export const formatImapDate = (date: DateTime.Utc) => {
   const parts = DateTime.toPartsUtc(date);
